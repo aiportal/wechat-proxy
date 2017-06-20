@@ -3,7 +3,7 @@ A proxy server for wechat access_token and callback messages.
 Auto cache access_token until expires and dispatch callback messages to multiple server.  
   
 Simple replace:  
-    https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=APPID&secret=SECRET   
+    https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=APPID&secret=SECRET  
 to:  
     https://api.weixin.ultragis.com/cgi-bin/token?grant_type=client_credential&appid=APPID&secret=SECRET   
 and access_token can be shared by multiple process or multiple server.  
