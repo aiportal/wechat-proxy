@@ -29,7 +29,7 @@ If multiple call address has been set, first none empty result will be return to
 **微信公众号**  
 只需简单地替换 access_token 请求网址:  <br/>
     https://api.weixin.<b>qq</b>.com/cgi-bin/token?grant_type=client_credential&appid=APPID&secret=SECRET  <br/>
-为:  
+为:  <br/>
     https://api.weixin.<b>ultragis</b>.com/cgi-bin/token?grant_type=client_credential&appid=APPID&secret=SECRET  <br/>
 即可多个进程或多台服务器共享 access_token。<br/>  
   <br/>
