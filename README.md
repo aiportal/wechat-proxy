@@ -2,23 +2,23 @@
 A proxy server for wechat access_token and callback messages.  
 Auto cache access_token until expires and dispatch callback messages to multiple server.  
   
-    Simple replace:  
+Simple replace:  
     https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=APPID&secret=SECRET   
-    to:  
+to:  
     https://api.weixin.ultragis.com/cgi-bin/token?grant_type=client_credential&appid=APPID&secret=SECRET   
-    and access_token can be shared by multiple process or multiple server.  
+and access_token can be shared by multiple process or multiple server.  
   
-    Simple replace:   
+Simple replace:   
     https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=CORPID&corpsecret=SECRET  
-    to:   
+to:   
     https://qyapi.weixin.ultragis.com/cgi-bin/gettoken?corpid=CORPID&corpsecret=SECRET   
-    and access_token can be shared by multiple process or multiple server.  
+and access_token can be shared by multiple process or multiple server.  
   
-    Set wechat callback address like this:  
+Set wechat callback address like this:  
     https://svc.weixin.ultragis.com/?call=https%3A//api.weixin.ultragis.com&call=www.ultragis.com  
-    wechat callback message will dispatch to https://api.weixin.ultragis.com and http://www.ultragis.com  
+wechat callback message will dispatch to https://api.weixin.ultragis.com and http://www.ultragis.com  
   
-    If multiple call address has been set, first none empty result will be return to wechat server.
+If multiple call address has been set, first none empty result will be return to wechat server.
 
 
 
