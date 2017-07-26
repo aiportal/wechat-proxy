@@ -1,10 +1,10 @@
+// Copyright 2017 https://github.com/aiportal.
+// All rights reserved.
+
 package wxproxy
 
 import (
-	"encoding/json"
-	"errors"
-	"io/ioutil"
-	"net/http"
+	"fmt"
 	"time"
 )
 
@@ -14,37 +14,21 @@ var TokenCacheDuration = 3600 * time.Second
 // access_token max count in memory
 var TokenCacheLimit = 100
 
+// wechat error response
 type wxError struct {
+	error
 	ErrCode int    `json:"errcode"`
 	ErrMsg  string `json:"errmsg"`
 }
 
-func parseError(data []byte) (err error) {
-	var e wxError
-	err = json.Unmarshal(data, &e)
-	if err != nil {
-		return
-	}
-	if e.ErrCode != 0 {
-		err = errors.New(string(data))
-	}
-	return
+func (e *wxError) Success() bool {
+	return e.ErrCode == 0
 }
 
-func httpGet(url string) (body []byte, err error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return
+func (e *wxError) Error() string {
+	if e.ErrCode == 0 {
+		return ""
 	}
-	defer resp.Body.Close()
-
-	body, err = ioutil.ReadAll(resp.Body)
-	return
+	js := fmt.Sprintf(`{"errcode": %d, "errmsg": "%s"}`, e.ErrCode, e.ErrMsg)
+	return js
 }
-
-//type wxAccessToken struct {
-//	wxError
-//
-//	AccessToken string  `json:"access_token"`
-//	ExpiresIn int       `json:"expires_in"`
-//}

@@ -16,15 +16,16 @@ const messageContentType = "application/x-www-form-urlencoded"
 
 var emptyStringBytes = []byte("")
 
-type MessageServer struct {
+// https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1421135319
+type WechatMessageServer struct {
 }
 
-func NewMessageServer() *MessageServer {
-	srv := new(MessageServer)
+func NewMessageServer() *WechatMessageServer {
+	srv := new(WechatMessageServer)
 	return srv
 }
 
-func (srv *MessageServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (srv *WechatMessageServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(r.RequestURI)
 	r.ParseForm()
 
@@ -63,7 +64,7 @@ func (srv *MessageServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Check all callback url.
-func (srv *MessageServer) verifyCallback(urls []string, echostr string) (success bool) {
+func (srv *WechatMessageServer) verifyCallback(urls []string, echostr string) (success bool) {
 
 	chs := make([]chan string, len(urls))
 	for i, _url := range urls {
@@ -103,7 +104,7 @@ func (srv *MessageServer) verifyCallback(urls []string, echostr string) (success
 	return
 }
 
-func (srv *MessageServer) dispatchMessage(urls []string, body io.Reader) (result []byte) {
+func (srv *WechatMessageServer) dispatchMessage(urls []string, body io.Reader) (result []byte) {
 
 	chs := make([]chan []byte, len(urls))
 	for i, _url := range urls {
@@ -143,7 +144,7 @@ func (srv *MessageServer) dispatchMessage(urls []string, body io.Reader) (result
 }
 
 // Get wechat message query parameters
-func (srv *MessageServer) messageQuery(form *url.Values) string {
+func (srv *WechatMessageServer) messageQuery(form *url.Values) string {
 	signature, timestamp, nonce := form.Get("signature"), form.Get("timestamp"), form.Get("nonce")
 	echostr := form.Get("echostr")
 	if signature == "" {
@@ -157,7 +158,7 @@ func (srv *MessageServer) messageQuery(form *url.Values) string {
 }
 
 // Get absolute url contain http:// or https://
-func (srv *MessageServer) normalizeUrl(url string, query string) string {
+func (srv *WechatMessageServer) normalizeUrl(url string, query string) string {
 	if !strings.HasPrefix(url, "http") {
 		url = "http://" + url
 	}

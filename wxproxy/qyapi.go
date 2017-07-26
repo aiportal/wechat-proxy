@@ -1,45 +1,81 @@
 package wxproxy
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 )
 
-// https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=CORPID&corpsecret=SECRET
-const qyapiBaseUrl = "https://qyapi.weixin.qq.com/cgi-bin/gettoken"
-
-type QYApiServer struct {
+// doc: https://work.weixin.qq.com/api/doc#10013
+type WechatQYApiServer struct {
 	tokenMap *cacheMap
 }
 
-func NewQYApiServer() *QYApiServer {
-	srv := new(QYApiServer)
+func NewQYApiServer() *WechatQYApiServer {
+	srv := new(WechatQYApiServer)
 	srv.tokenMap = NewCacheMap(TokenCacheDuration, TokenCacheLimit)
 	return srv
 }
 
-func (srv *QYApiServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (srv *WechatQYApiServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	corpid := r.Form.Get("corpid")
+	appid, secret := r.Form.Get("corpid"), r.Form.Get("corpsecret")
 
-	if value, ok := srv.tokenMap.Get(corpid); ok {
-		w.Write([]byte(value))
+	if value, ok := srv.tokenMap.Get(appid); ok {
+		w.Write([]byte(value.(string)))
 		return
 	}
 
-	url := qyapiBaseUrl + "?" + r.URL.RawQuery
-	body, err := httpGet(url)
+	_url := srv.accessTokenUrl(appid, secret)
+	body, err := srv.httpGet(_url)
 	if err != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	err = parseError(body)
+	if len(body) < 10 {
+		w.Write([]byte(`{"errcode":40001,"errmsg":"invalid credential"}`))
+		return
+	}
+	err = srv.parseError(body)
 	if err != nil {
 		w.Write([]byte(err.Error()))
 		return
 	}
 
 	w.Write(body)
-	srv.tokenMap.Set(corpid, string(body))
+	srv.tokenMap.Set(appid, string(body))
 	srv.tokenMap.Shrink()
+	return
+}
+
+// https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=CORPID&corpsecret=SECRET
+func (srv *WechatQYApiServer) accessTokenUrl(appid, secret string) string {
+	baseUrl := "https://qyapi.weixin.qq.com/cgi-bin/gettoken"
+	_url := fmt.Sprintf("%s?corpid=%s&corpsecret=%s", baseUrl, appid, secret)
+	return _url
+}
+
+func (srv *WechatQYApiServer) httpGet(url string) (body []byte, err error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err = ioutil.ReadAll(resp.Body)
+	return
+}
+
+func (srv *WechatQYApiServer) parseError(data []byte) (err error) {
+	var e wxError
+	err = json.Unmarshal(data, &e)
+	if err != nil {
+		return
+	}
+	if e.ErrCode != 0 {
+		err = errors.New(string(data))
+	}
 	return
 }

@@ -11,8 +11,8 @@ type cacheItem struct {
 }
 
 type cacheMap struct {
-	m    map[string]cacheItem
-	lock sync.RWMutex
+	m      map[string]cacheItem
+	lock   sync.RWMutex
 	config struct {
 		duration time.Duration // duration for cache item in memory.
 		limit    int           // limit for cache item count.
@@ -68,7 +68,8 @@ func (tm *cacheMap) Clean() {
 }
 
 func (tm *cacheMap) Shrink() {
-	if tm.Len() > tm.config.limit {
-		go tm.Clean()
+	if tm.Len() < tm.config.limit {
+		return
 	}
+	go tm.Clean()
 }
