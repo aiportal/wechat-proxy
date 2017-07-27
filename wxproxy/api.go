@@ -1,11 +1,12 @@
 package wxproxy
 
 import (
-	"fmt"
-	"net/http"
+	"crypto/md5"
 	"encoding/json"
-	"io/ioutil"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"net/http"
 )
 
 // doc: https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1421140183
@@ -22,8 +23,10 @@ func NewApiServer() *WechatApiServer {
 func (srv *WechatApiServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	appid, secret := r.Form.Get("appid"), r.Form.Get("secret")
+	hashBytes := md5.Sum([]byte(appid + ":" + secret))
+	hashKey := string(hashBytes[:])
 
-	if value, ok := srv.tokenMap.Get(appid); ok {
+	if value, ok := srv.tokenMap.Get(hashKey); ok {
 		w.Write([]byte(value.(string)))
 		return
 	}
@@ -41,7 +44,7 @@ func (srv *WechatApiServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(body)
-	srv.tokenMap.Set(appid, string(body))
+	srv.tokenMap.Set(hashKey, string(body))
 	srv.tokenMap.Shrink()
 	return
 }
@@ -75,4 +78,3 @@ func (srv *WechatApiServer) parseError(data []byte) (err error) {
 	}
 	return
 }
-

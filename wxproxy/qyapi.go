@@ -1,6 +1,7 @@
 package wxproxy
 
 import (
+	"crypto/md5"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,8 +23,10 @@ func NewQYApiServer() *WechatQYApiServer {
 func (srv *WechatQYApiServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	appid, secret := r.Form.Get("corpid"), r.Form.Get("corpsecret")
+	hashBytes := md5.Sum([]byte(appid + ":" + secret))
+	hashKey := string(hashBytes[:])
 
-	if value, ok := srv.tokenMap.Get(appid); ok {
+	if value, ok := srv.tokenMap.Get(hashKey); ok {
 		w.Write([]byte(value.(string)))
 		return
 	}
@@ -45,7 +48,7 @@ func (srv *WechatQYApiServer) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Write(body)
-	srv.tokenMap.Set(appid, string(body))
+	srv.tokenMap.Set(hashKey, string(body))
 	srv.tokenMap.Shrink()
 	return
 }

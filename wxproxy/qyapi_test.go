@@ -24,7 +24,11 @@ func TestQYApiServer(t *testing.T) {
 			fields: []string{"access_token", "expires_in"},
 		},
 		{
-			url:    fmt.Sprintf("/qyapi?corpid=%s&corpsecret=%s", appid + "xxx", secret),
+			url:    fmt.Sprintf("/qyapi?corpid=%s&corpsecret=%s", appid+"xxx", secret),
+			fields: []string{"errcode", "errmsg"},
+		},
+		{
+			url:    fmt.Sprintf("/qyapi?corpid=%s&corpsecret=%s", appid, secret+"xxx"),
 			fields: []string{"errcode", "errmsg"},
 		},
 	}
