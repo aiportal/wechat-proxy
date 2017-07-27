@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"wechat-proxy/wxproxy"
@@ -15,11 +16,15 @@ func main() {
 	http.Handle("/svc", wxproxy.NewMessageServer())
 	http.Handle("/auth", wxproxy.NewAuthServer())
 
-	//http.HandleFunc("/debug", func(w http.ResponseWriter, r *http.Request) {
-	//	r.ParseForm()
-	//	echostr := r.Form.Get("echostr")
-	//	w.Write([]byte(echostr))
-	//})
+	http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			return
+		}
+		w.Write(body)
+	})
 
 	host, port := parseArgs()
 	address := fmt.Sprintf("%s:%d", host, port)

@@ -2,17 +2,15 @@ package wxproxy
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+	"bytes"
 )
 
 const messageRequestTimeout = 5 * time.Second
-
-const messageContentType = "application/x-www-form-urlencoded"
 
 var emptyStringBytes = []byte("")
 
@@ -26,7 +24,7 @@ func NewMessageServer() *WechatMessageServer {
 }
 
 func (srv *WechatMessageServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.RequestURI)
+	// fmt.Println(r.RequestURI)
 	r.ParseForm()
 
 	// prepare callback urls
@@ -38,7 +36,7 @@ func (srv *WechatMessageServer) ServeHTTP(w http.ResponseWriter, r *http.Request
 	query := srv.messageQuery(&r.Form)
 	for i, v := range call_urls {
 		call_urls[i] = srv.normalizeUrl(v, query)
-		fmt.Printf("call: %s\n", call_urls[i])
+		//fmt.Printf("call: %s\n", call_urls[i])
 	}
 
 	// verify callback urls
@@ -55,12 +53,12 @@ func (srv *WechatMessageServer) ServeHTTP(w http.ResponseWriter, r *http.Request
 
 	// dispatch callback message
 	defer r.Body.Close()
-	data := srv.dispatchMessage(call_urls, r.Body)
-	if len(data) > 0 {
-		w.Write(data)
-	} else {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
 		w.Write(emptyStringBytes)
 	}
+	data := srv.dispatchMessage(call_urls, body)
+	w.Write(data)
 }
 
 // Check all callback url.
@@ -104,19 +102,20 @@ func (srv *WechatMessageServer) verifyCallback(urls []string, echostr string) (s
 	return
 }
 
-func (srv *WechatMessageServer) dispatchMessage(urls []string, body io.Reader) (result []byte) {
+// dispatch message body to calls define
+func (srv *WechatMessageServer) dispatchMessage(urls []string, body []byte) (result []byte) {
 
 	chs := make([]chan []byte, len(urls))
 	for i, _url := range urls {
 		chs[i] = make(chan []byte)
 
-		go func(url string, data io.Reader, ch chan []byte) {
+		go func(url string, data []byte, ch chan []byte) {
 			defer close(ch)
 
 			client := &http.Client{
 				Timeout: messageRequestTimeout,
 			}
-			resp, err := client.Post(url, messageContentType, body)
+			resp, err := client.Post(url, "", bytes.NewReader(data))
 			if err != nil {
 				return
 			}
