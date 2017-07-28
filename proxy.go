@@ -36,7 +36,9 @@ func main() {
 func parseArgs() (host string, port uint) {
 
 	flag.StringVar(&host, "host", "", "Listening hostname.")
+	flag.StringVar(&host, "h", "", "Listening hostname.")
 	flag.UintVar(&port, "port", 8080, "Listening port.")
+	flag.UintVar(&port, "p", 8080, "Listening port.")
 
 	flag.Parse()
 	return
