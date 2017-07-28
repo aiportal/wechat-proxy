@@ -20,6 +20,8 @@ wechat callback message will dispatch to https://api.weixin.ultragis.com and htt
   
 If multiple call address has been set, first none empty result will be return to wechat server.
 
+Simple wechat oauth2 proxy:
+Code has complete, doc later.
 
 
 ## 微信代理  
@@ -46,3 +48,6 @@ If multiple call address has been set, first none empty result will be return to
 微信回调消息将自动转发给 https://api.weixin.ultragis.com 和 http://www.ultragis.com  <br/>
   <br/>
 如果设置了多个 call 参数，系统会将第一个非空的请求结果返回给微信服务器。  <br/>
+
+**微信登录认证**
+功能已开发完毕，文档稍后。
