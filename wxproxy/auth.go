@@ -381,13 +381,13 @@ func (srv *WechatAuthServer) sendTestLink(r *http.Request, p *AuthRequestParam, 
              "title":"Wechat Auth Test",
              "description":"Wechat auth test from wechat-proxy",
              "url":"%s",
-             "picurl":"https://mp.weixin.qq.com/debug/zh_CN/htmledition/images/bg/bg_logo1f2fc8.png"
+             "picurl":"https://raw.githubusercontent.com/aiportal/wechat-proxy/master/WeChat-Proxy.png"
          },
          {
              "title":"Github Project",
              "description":"Github address for wechat-proxy",
              "url":"https://github.com/aiportal/wechat-proxy/blob/master/README.md",
-             "picurl":"https://mp.weixin.qq.com/debug/zh_CN/htmledition/images/bg/bg_logo1f2fc8.png"
+             "picurl":"https://assets-cdn.github.com/images/modules/logos_page/Octocat.png"
          }]
 	}}`, openid, link)
 
