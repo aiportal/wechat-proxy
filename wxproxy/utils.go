@@ -16,9 +16,8 @@ var TokenCacheLimit = 100
 
 // wechat error response
 type wxError struct {
-	error
-	ErrCode int    `json:"errcode"`
-	ErrMsg  string `json:"errmsg"`
+	ErrCode int    `json:"errcode,omitempty"`
+	ErrMsg  string `json:"errmsg,omitempty"`
 }
 
 func (e *wxError) Success() bool {

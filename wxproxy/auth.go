@@ -3,6 +3,7 @@ package wxproxy
 import (
 	"crypto/md5"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -15,11 +16,13 @@ var AuthRequestDuration = 300 * time.Second
 var AuthRequestLimit = 1000
 
 type AuthRequestParam struct {
-	Appid    string
+	HostUrl  string
+	AppId    string
 	Secret   string
 	Redirect string
 	Scope    string
 	State    string
+	Lang     string
 }
 
 type AuthTokenInfo struct {
@@ -31,21 +34,7 @@ type AuthTokenInfo struct {
 	Scope        string `json:"scope"`
 }
 
-type AuthResultUserInfo struct {
-	wxError
-	OpenId  string `json:"openid"`
-	UnionId string `json:"unionid"`
-
-	NickName   string   `json:"nickname"`
-	Sex        string   `json:"sex"`
-	Province   string   `json:"province"`
-	City       string   `json:"city"`
-	Country    string   `json:"country"`
-	HeadImgUrl string   `json:"headimgurl"`
-	Privilege  []string `json:"privilege"`
-}
-
-// doc: https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1421140842
+// https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1421140842
 type WechatAuthServer struct {
 	requestMap *cacheMap
 }
@@ -64,7 +53,7 @@ func NewAuthServer() *WechatAuthServer {
 // The post data is encrypted by secret and contains openid, unionid and access_token, refresh_token
 // Then, client can get userinfo by access_token and refresh_token(depend on scope).
 func (srv *WechatAuthServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.RequestURI)
+	//fmt.Println(r.RequestURI)
 	r.ParseForm()
 
 	//-------------------------------------------
@@ -73,10 +62,21 @@ func (srv *WechatAuthServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	authid := r.Form.Get("authid")
 	if authid == "" {
-		// return proxy url, description by json
-		proxy_url, duration := srv.proxyUrl(srv.rawUrl(r))
+		// check and parse parameters
+		param, err := srv.parseParameters(r)
+		if err != nil {
+			e := wxError{ErrCode: -10001, ErrMsg: err.Error()}
+			w.Write([]byte(e.Error()))
+			return
+		}
+		// return proxy url
+		proxy_url, duration := srv.proxyUrl(r, param)
 		proxy_json := fmt.Sprintf(`{"auth_uri":"%s", "expires_in":%d}`, proxy_url, duration)
 		w.Write([]byte(proxy_json))
+
+		if r.Form.Get("test") != "" {
+			srv.sendTestLink(r, param, proxy_url)
+		}
 		return
 	}
 
@@ -95,73 +95,122 @@ func (srv *WechatAuthServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	code := r.Form.Get("code")
 	if code == "" {
 		// redirect wechat oauth2 url
-		auth_url := srv.wechatAuthUrl(&p)
+		auth_url := srv.wechatAuthUrl(&p, authid)
 		http.Redirect(w, r, auth_url, http.StatusTemporaryRedirect)
+		fmt.Printf("auth_url: %s\n", auth_url)
 		return
 	}
 
 	//-------------------------------------------
 	// wechat client second visit here
 	//-------------------------------------------
+	fmt.Printf("code: %s\n", code)
 
 	// Get openid from wechat server
 	token := srv.requestTokenInfo(&p, code)
 	if !token.Success() {
-		info := AuthResultUserInfo{wxError: token.wxError}
-		srv.clientPost(&p, &info)
+		//info := WechatUserInfo{wxError: token.wxError}
+		//srv.clientPost(&p, &info)
+		w.Write([]byte(token.wxError.Error()))
 		return
 	}
+	fmt.Printf("openid: %s\n", token.OpenId)
 
 	// get user info from wechat server
 	if p.Scope == "snsapi_base" {
+		fmt.Printf("scope: %s\n", p.Scope)
 		// request unionid
-		info := srv.requestBaseInfo(&p, token.OpenId)
-		srv.clientPost(&p, info)
+		c := NewWechatClient(p.HostUrl, p.AppId, p.Secret)
+		info, err := c.getUserInfo(token.OpenId, p.Lang)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			return
+		}
+
+		html, err := srv.postForm(&p, info)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			return
+		}
+		w.Write([]byte(html))
 		return
 	}
 
 	if p.Scope == "snsapi_userinfo" {
+		fmt.Printf("scope: %s\n", p.Scope)
 		// request user info
-		info := srv.requestUserInfo(&p, token.OpenId, token.AccessToken)
-		srv.clientPost(&p, info)
+		info, err := srv.requestUserInfo(token.AccessToken, token.OpenId, p.Lang)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			return
+		}
+
+		html, err := srv.postForm(&p, info)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			return
+		}
+		w.Write([]byte(html))
 		return
 	}
 }
 
-// get raw url
-func (srv *WechatAuthServer) rawUrl(r *http.Request) *url.URL {
+// parse and check request parameters
+func (srv *WechatAuthServer) parseParameters(r *http.Request) (p *AuthRequestParam, err error) {
+	f := r.Form
+
+	if f.Get("appid") == "" || f.Get("secret") == "" || f.Get("redirect_uri") == "" {
+		tip := "need parameters: appid, secret, redirect_uri, scope(optional), state(optional), lang(optional)"
+		err = errors.New(tip)
+		return
+	}
+
+	redirect_uri := f.Get("redirect_uri")
+	redirect_uri = srv.normalizeUrl(redirect_uri, "")
+	_, err = url.Parse(redirect_uri)
+	if err != nil {
+		return
+	}
+
+	scope := f.Get("scope")
+	if scope != "snsapi_base" && scope != "snsapi_userinfo" {
+		scope = "snsapi_base"
+	}
+
+	lang := f.Get("lang")
+	if lang == "" {
+		lang = "zh_CN"
+	}
+
 	scheme := "http://"
 	if r.TLS != nil {
 		scheme = "https://"
 	}
-	raw_url := strings.Join([]string{scheme, r.Host, r.RequestURI}, "")
-	_url, _ := url.Parse(raw_url)
-	return _url
+
+	p = new(AuthRequestParam)
+	p.HostUrl = fmt.Sprintf("%s%s", scheme, r.Host)
+	p.AppId = f.Get("appid")
+	p.Secret = f.Get("secret")
+	p.Redirect = redirect_uri
+	p.Scope = scope
+	p.State = f.Get("state")
+	p.Lang = lang
+
+	return
 }
 
-// generate a json package contains proxy url.
-func (srv *WechatAuthServer) proxyUrl(_url *url.URL) (proxyUrl string, duration uint64) {
-
-	// parse auth request parameters
-	form := _url.Query()
-	param := AuthRequestParam{
-		Appid:    form.Get("appid"),
-		Secret:   form.Get("secret"),
-		Redirect: form.Get("redirect_uri"),
-		Scope:    form.Get("scope"),
-		State:    form.Get("state"),
-	}
-	param.Redirect = srv.normalizeUrl(param.Redirect, "")
+// generate proxy url by authid
+func (srv *WechatAuthServer) proxyUrl(r *http.Request, p *AuthRequestParam) (proxyUrl string, duration uint64) {
 
 	// Store request parameters in cache
-	auth_query := fmt.Sprintf("%s&t=%d", _url.RawQuery, time.Now().Unix())
-	auth_hash := md5.Sum([]byte(auth_query))
-	authid := fmt.Sprintf("%X", auth_hash[:])
-	srv.requestMap.Set(authid, param)
+	query_rand := fmt.Sprintf("%s&_=%d", r.URL.RawQuery, time.Now().Unix())
+	query_hash := md5.Sum([]byte(query_rand))
+	authid := fmt.Sprintf("%X", query_hash[:])
+	srv.requestMap.Set(authid, *p)
 	defer srv.requestMap.Shrink()
 
 	// generate proxy url
-	proxyUrl = fmt.Sprintf("%s://%s%s?authid=%s", _url.Scheme, _url.Host, _url.Path, authid)
+	proxyUrl = fmt.Sprintf("%s/auth?authid=%s", p.HostUrl, authid)
 	duration = uint64(AuthRequestDuration / time.Second)
 	return
 }
@@ -170,11 +219,13 @@ func (srv *WechatAuthServer) proxyUrl(_url *url.URL) (proxyUrl string, duration 
 // doc: https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1421140839
 // url: https://open.weixin.qq.com/connect/oauth2/authorize?
 // 		appid=APPID&redirect_uri=REDIRECT_URI&response_type=code&scope=SCOPE&state=STATE#wechat_redirect
-func (srv *WechatAuthServer) wechatAuthUrl(p *AuthRequestParam) string {
+func (srv *WechatAuthServer) wechatAuthUrl(p *AuthRequestParam, authid string) string {
+
+	redirect_uri := fmt.Sprintf("%s/auth?authid=%s", p.HostUrl, authid)
 
 	baseUrl := "https://open.weixin.qq.com/connect/oauth2/authorize"
 	_url := fmt.Sprintf("%s?appid=%s&redirect_uri=%s&response_type=code&scope=%s&state=%s#wechat_redirect",
-		baseUrl, p.Appid, p.Redirect, p.Scope, p.State)
+		baseUrl, p.AppId, url.QueryEscape(redirect_uri), p.Scope, p.State)
 	return _url
 }
 
@@ -185,35 +236,81 @@ func (srv *WechatAuthServer) wechatAuthUrl(p *AuthRequestParam) string {
 func (srv *WechatAuthServer) requestTokenInfo(p *AuthRequestParam, code string) (token *AuthTokenInfo) {
 	baseUrl := "https://api.weixin.qq.com/sns/oauth2/access_token"
 	_url := fmt.Sprintf("%s?appid=%s&secret=%s&code=%s&grant_type=authorization_code",
-		baseUrl, p.Appid, p.Secret, code)
+		baseUrl, p.AppId, p.Secret, code)
 
 	token = new(AuthTokenInfo)
 	err := srv.getJsonObject(_url, &token)
 	if err != nil {
-		token.wxError = wxError{ ErrCode:-10001, ErrMsg:err.Error() }
+		token.wxError = wxError{ErrCode: -10002, ErrMsg: err.Error()}
 		return token
 	}
 	return token
 }
 
-// request unionid by service app access_token and openid
-// doc: https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1421140839
-// url: https://api.weixin.qq.com/cgi-bin/user/info?access_token=ACCESS_TOKEN&openid=OPENID&lang=zh_CN
-func (srv *WechatAuthServer) requestBaseInfo(p *AuthRequestParam, openid string) *AuthResultUserInfo {
-	// TODO: ...
-
-	info := new(AuthResultUserInfo)
-	return info
-}
-
 // request user info by oauth2 access_token and openid
 // doc: https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1421140839
 // url: https://api.weixin.qq.com/sns/userinfo?access_token=ACCESS_TOKEN&openid=OPENID&lang=zh_CN
-func (srv *WechatAuthServer) requestUserInfo(p *AuthRequestParam, openid, token string) *AuthResultUserInfo {
-	// TODO: ...
+func (srv *WechatAuthServer) requestUserInfo(token, openid, lang string) (info *WechatUserInfo, err error) {
 
-	info := new(AuthResultUserInfo)
-	return info
+	fmt_url := "https://api.weixin.qq.com/sns/userinfo?access_token=%s&openid=%s&lang=%s"
+	_url := fmt.Sprintf(fmt_url, token, openid, lang)
+
+	info = new(WechatUserInfo)
+	err = srv.getJsonObject(_url, info)
+	if err != nil {
+		return
+	}
+	return
+}
+
+// client open a html page and post data to server automatic
+// ref: https://systemoverlord.com/2016/08/24/posting-json-with-an-html-form.html
+func (srv *WechatAuthServer) postForm(p *AuthRequestParam, info *WechatUserInfo) (html string, err error) {
+
+	type FormInfo struct {
+		WechatUserInfo
+		AppId string `json:"appid"`
+		State string `json:"state"`
+		Trash string `json:"trash"`
+	}
+	var f = FormInfo{
+		WechatUserInfo: *info,
+		AppId:          p.AppId,
+		State:          p.State,
+	}
+
+	jsonData, err := json.Marshal(f)
+	if err != nil {
+		return
+	}
+	jsonStr := string(jsonData)
+	// fmt.Printf("post json: %s\n", jsonStr)
+
+	htmlTemplate := `
+	<body onload='document.forms[0].submit()'>
+	  <form method='POST' enctype='text/plain' action='%s' style='display:none;'>
+		<input name='%s' value='%s'>
+	  </form>
+	</body>`
+	pos := len(jsonStr) - 2
+	html = fmt.Sprintf(htmlTemplate, p.Redirect, jsonStr[:pos], jsonStr[pos:])
+	return
+}
+
+// Get absolute url contain http:// or https://
+func (srv *WechatAuthServer) normalizeUrl(url string, query string) string {
+	if !strings.HasPrefix(url, "http") {
+		url = "http://" + url
+	}
+	if query == "" {
+		return url
+	}
+	if !strings.Contains(url, "?") {
+		url += "?"
+	} else {
+		url += "&"
+	}
+	return url + query
 }
 
 // request json object
@@ -233,47 +330,85 @@ func (srv *WechatAuthServer) getJsonObject(url string, obj interface{}) (err err
 	return
 }
 
-// Post data to redirectUrl
-// ref: https://systemoverlord.com/2016/08/24/posting-json-with-an-html-form.html
-func (srv *WechatAuthServer) redirectForm(redirectUrl string, postBody string) string {
-	htmlTemplate := `
-	<body onload='document.forms[0].submit()'>
-	  <form method='POST' enctype='text/plain' action='%s' style='display:none;'>
-		<input name='%s' value='%s'>
-	  </form>
-	</body>`
-	html := fmt.Sprintf(htmlTemplate, redirectUrl, postBody, "")
-	return html
-}
+func (srv *WechatAuthServer) sendTestLink(r *http.Request, p *AuthRequestParam, link string) {
 
-// client open a html page and post data to server automatic
-func (srv *WechatAuthServer) clientPost(p *AuthRequestParam, info *AuthResultUserInfo) {
-	secret := []byte(p.Secret)
-	if len(secret) != 32 {
-		emptyBytes := [32]byte{}
-		secret = append(secret, emptyBytes[:]...)
-		secret = secret[:32]
-	}
-	//e, _ := aes.NewCipher([]byte(p.Secret))
-	//for k, v := range m {
-	//	dst := new([]byte, len(v))
-	//	e.Encrypt(dst, []byte(v))
-	//	m[k] = fmt.Sprintf("%x", dst)
-	//}
-}
+	appid := r.Form.Get("appid")
+	secret := r.Form.Get("secret")
+	openid := r.Form.Get("test")
 
-// Get absolute url contain http:// or https://
-func (srv *WechatAuthServer) normalizeUrl(url string, query string) string {
-	if !strings.HasPrefix(url, "http") {
-		url = "http://" + url
+	var getWechatToken = func() (token string, err error) {
+		scheme := "http://"
+		if r.TLS != nil {
+			scheme = "https://"
+		}
+		token_url := fmt.Sprintf("%s%s/api?appid=%s&secret=%s", scheme, r.Host, appid, secret)
+		resp, err := http.Get(token_url)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		var tokenResult struct {
+			AccessToken string `json:"access_token"`
+			Expires     uint64 `json:"expires_in"`
+		}
+		err = json.Unmarshal(body, &tokenResult)
+		if err != nil {
+			fmt.Println(token_url)
+			fmt.Println(string(body))
+			fmt.Println(err.Error())
+			return
+		}
+		token = tokenResult.AccessToken
+		return
 	}
-	if query == "" {
-		return url
+
+	var sendWechatMessage = func(accessToken string) {
+		sendUrl := "https://api.weixin.qq.com/cgi-bin/message/custom/send"
+		send_url := fmt.Sprintf("%s?access_token=%s", sendUrl, accessToken)
+
+		data := fmt.Sprintf(`{
+	"touser":"%s",
+	"msgtype":"news",
+	"news":{
+        "articles": [
+         {
+             "title":"Wechat Auth Test",
+             "description":"Wechat auth test from wechat-proxy",
+             "url":"%s",
+             "picurl":"https://mp.weixin.qq.com/debug/zh_CN/htmledition/images/bg/bg_logo1f2fc8.png"
+         },
+         {
+             "title":"Github Project",
+             "description":"Github address for wechat-proxy",
+             "url":"https://github.com/aiportal/wechat-proxy/blob/master/README.md",
+             "picurl":"https://mp.weixin.qq.com/debug/zh_CN/htmledition/images/bg/bg_logo1f2fc8.png"
+         }]
+	}}`, openid, link)
+
+		resp, err := http.Post(send_url, "", strings.NewReader(data))
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		fmt.Println(string(body))
 	}
-	if !strings.Contains(url, "?") {
-		url += "?"
-	} else {
-		url += "&"
+
+	access_token, err := getWechatToken()
+	if err != nil {
+		return
 	}
-	return url + query
+	fmt.Printf("test: %s\n", link)
+	sendWechatMessage(access_token)
 }
