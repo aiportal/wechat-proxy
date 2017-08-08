@@ -7,13 +7,12 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 )
 
 func TestApiServer(t *testing.T) {
-	appid := os.Args[2]
-	secret := os.Args[3]
+	appid := "wx06766a90ab72960e"
+	secret := "05bd8b6064a9941b72ee44d5b3bfdb6a"
 
 	ts_data := []struct {
 		url    string
@@ -33,7 +32,8 @@ func TestApiServer(t *testing.T) {
 		},
 	}
 
-	ts := httptest.NewServer(NewApiServer())
+	srv := NewApiServer()
+	ts := httptest.NewServer(srv)
 	defer ts.Close()
 
 	for _, v := range ts_data {
@@ -47,8 +47,6 @@ func TestApiServer(t *testing.T) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		//fmt.Println(v.url)
-		//fmt.Println(string(body))
 
 		var f interface{}
 		err = json.Unmarshal(body, &f)
@@ -61,6 +59,22 @@ func TestApiServer(t *testing.T) {
 			if m[fld] == nil {
 				log.Fatal()
 			}
+		}
+
+		s, ok := srv.getSecret(appid)
+		if !ok {
+			t.Fatal("secret cache fail")
+		}
+		if s != secret {
+			fmt.Println(s)
+			t.Fatal("secret cache error")
+		}
+		token, ok := srv.getAccessToken(appid)
+		if !ok {
+			t.Fatal("token cache fail")
+		}
+		if token == "" {
+			t.Fatal("token cache error")
 		}
 	}
 }
