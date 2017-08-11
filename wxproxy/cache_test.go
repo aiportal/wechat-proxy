@@ -40,9 +40,9 @@ func TestCacheMap(t *testing.T) {
 	}
 
 	time.Sleep(2 * time.Second)
-	cache.Clean()
-	fmt.Println(cache.Len())
-	if cache.Len() > 1 {
+	cache.Shrink()
+	if len(cache.m) > 1 {
+		fmt.Println(len(cache.m))
 		t.Fatal()
 	}
 }

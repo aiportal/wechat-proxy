@@ -11,16 +11,10 @@ import (
 
 const (
 	// access_token stay time in memory
-	TokenCacheDuration = 3600 * time.Second
+	tokenCacheDuration = 3600 * time.Second
 
 	// access_token max count in memory
-	TokenCacheLimit = 100
-
-	// secret stay time in memory
-	SecretCacheDuration = 48 * 3600 * time.Second
-
-	// secret max count in memory
-	SecretCacheLimit = 100
+	tokenCacheLimit = 100
 )
 
 type wxAccessToken struct {
@@ -32,13 +26,11 @@ type wxAccessToken struct {
 // doc: https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1421140183
 type WechatApiServer struct {
 	tokenMap *cacheMap
-	secretMap *cacheMap
 }
 
 func NewApiServer() *WechatApiServer {
 	srv := new(WechatApiServer)
-	srv.tokenMap = NewCacheMap(TokenCacheDuration, TokenCacheLimit)
-	srv.secretMap = NewCacheMap(SecretCacheDuration, SecretCacheLimit)
+	srv.tokenMap = NewCacheMap(tokenCacheDuration, tokenCacheLimit)
 	return srv
 }
 
@@ -47,14 +39,13 @@ func (srv *WechatApiServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	appid, secret := r.Form.Get("appid"), r.Form.Get("secret")
 
 	// find token
-	hashBytes := md5.Sum([]byte(appid + ":" + secret))
-	hashKey := string(hashBytes[:])
-	if value, ok := srv.tokenMap.Get(hashKey); ok {
+	key := srv.hashKey(appid, secret)
+	if value, ok := srv.tokenMap.Get(key); ok {
 		w.Write(value.([]byte))
 		return
 	}
 
-	token := new(wxAccessToken)
+	token := &wxAccessToken{}
 	_url := srv.accessTokenUrl(appid, secret)
 	body, err := srv.httpGetJson(_url, token)
 	if err != nil {
@@ -67,11 +58,14 @@ func (srv *WechatApiServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(body)
-	srv.tokenMap.Set(hashKey, body)
-	srv.tokenMap.Shrink()
-	srv.secretMap.Set(appid, secret)
-	srv.secretMap.Shrink()
+	srv.tokenMap.Set(key, body)
+	go srv.tokenMap.Shrink()
 	return
+}
+
+func (srv *WechatApiServer) hashKey(appid, secret string) string {
+	hashBytes := md5.Sum([]byte(appid + ":" + secret))
+	return string(hashBytes[:])
 }
 
 // url: https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=APPID&secret=SECRET
@@ -94,40 +88,5 @@ func (srv *WechatApiServer) httpGetJson(url string, obj interface{}) (body []byt
 	}
 
 	err = json.Unmarshal(body, obj)
-	return
-}
-
-func (srv *WechatApiServer) getSecret(appid string) (secret string, ok bool) {
-	s, ok := srv.secretMap.Get(appid)
-	if !ok {
-		return
-	}
-	secret, ok = s.(string)
-	return
-}
-
-func (srv *WechatApiServer) getAccessToken(appid string) (accessToken string, ok bool) {
-	s, ok := srv.secretMap.Get(appid)
-	if !ok {
-		return
-	}
-	secret, ok := s.(string)
-	if !ok {
-		return
-	}
-	hashBytes := md5.Sum([]byte(appid + ":" + secret))
-	hashKey := string(hashBytes[:])
-	t, ok := srv.tokenMap.Get(hashKey)
-	if !ok {
-		return
-	}
-
-	token := new(wxAccessToken)
-	err := json.Unmarshal(t.([]byte), token)
-	if err != nil {
-		ok = false
-		return
-	}
-	accessToken = token.AccessToken
 	return
 }

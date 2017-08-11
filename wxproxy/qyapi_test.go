@@ -7,13 +7,12 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 )
 
 func TestQYApiServer(t *testing.T) {
-	appid := os.Args[4]
-	secret := os.Args[5]
+	appid := "wx2c67ebb55a4012c3"
+	secret := "jVgdNTMwvUw0QpEnp3XCCuntS22gM5JT50FmvKtL-F8"
 
 	ts_data := []struct {
 		url    string
@@ -33,7 +32,7 @@ func TestQYApiServer(t *testing.T) {
 		},
 	}
 
-	ts := httptest.NewServer(NewQYApiServer())
+	ts := httptest.NewServer(NewQyServer())
 	defer ts.Close()
 
 	for _, v := range ts_data {

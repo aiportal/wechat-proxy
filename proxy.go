@@ -3,19 +3,21 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"wechat-proxy/wxproxy"
+	"io/ioutil"
 )
 
 func main() {
 
-	http.Handle("/api", wxproxy.NewApiServer())
-	http.Handle("/qyapi", wxproxy.NewQYApiServer())
-	http.Handle("/svc", wxproxy.NewMessageServer())
+	apiServer := wxproxy.NewApiServer()
+	http.Handle("/api", apiServer)
+	http.Handle("/qyapi", wxproxy.NewQyServer())
+	http.Handle("/msg", wxproxy.NewMessageServer())
 	http.Handle("/auth", wxproxy.NewAuthServer())
 
+	//http.Handle("/crypto", wxproxy.NewCryptoServer())
 	http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		body, err := ioutil.ReadAll(r.Body)
@@ -27,8 +29,8 @@ func main() {
 	})
 
 	host, port := parseArgs()
-	address := fmt.Sprintf("%s:%d", host, port)
 
+	address := fmt.Sprintf("%s:%d", host, port)
 	fmt.Printf("wechat proxy starting at %q ...\n", address)
 	log.Fatal(http.ListenAndServe(address, nil))
 }

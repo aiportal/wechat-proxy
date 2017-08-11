@@ -50,26 +50,16 @@ func (tm *cacheMap) Remove(key string) {
 	delete(tm.m, key)
 }
 
-func (tm *cacheMap) Len() int {
-	tm.lock.RLock()
-	defer tm.lock.RUnlock()
-	return len(tm.m)
-}
-
-func (tm *cacheMap) Clean() {
+func (tm *cacheMap) Shrink() {
 	tm.lock.Lock()
 	defer tm.lock.Unlock()
+	if len(tm.m) < tm.config.limit {
+		return
+	}
 	now := time.Now().Unix()
 	for k := range tm.m {
 		if tm.m[k].expire < now {
 			delete(tm.m, k)
 		}
 	}
-}
-
-func (tm *cacheMap) Shrink() {
-	if tm.Len() < tm.config.limit {
-		return
-	}
-	go tm.Clean()
 }

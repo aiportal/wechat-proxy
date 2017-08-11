@@ -68,31 +68,6 @@ func (c *WechatClient) getUserInfo(openid, lang string) (info *WechatUserInfo, e
 	_url := fmt.Sprintf(userinfo_url, access_token, openid, lang)
 
 	info = new(WechatUserInfo)
-	err = c.getJsonObject(_url, &info)
-	if err != nil {
-
-		return
-	}
-	return
-}
-
-func (c *WechatClient) getJsonObject(url string, obj interface{}) (err error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return
-	}
-
-	err = json.Unmarshal(body, obj)
-	if err != nil {
-		fmt.Println(url)
-		fmt.Println(string(body))
-		return
-	}
+	_, err = httpGetJson(_url, &info)
 	return
 }

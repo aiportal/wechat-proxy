@@ -60,21 +60,5 @@ func TestApiServer(t *testing.T) {
 				log.Fatal()
 			}
 		}
-
-		s, ok := srv.getSecret(appid)
-		if !ok {
-			t.Fatal("secret cache fail")
-		}
-		if s != secret {
-			fmt.Println(s)
-			t.Fatal("secret cache error")
-		}
-		token, ok := srv.getAccessToken(appid)
-		if !ok {
-			t.Fatal("token cache fail")
-		}
-		if token == "" {
-			t.Fatal("token cache error")
-		}
 	}
 }
