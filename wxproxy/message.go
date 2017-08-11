@@ -1,18 +1,17 @@
 package wxproxy
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
-	"bytes"
 )
 
 const messageRequestTimeout = 5 * time.Second
-
-var emptyStringBytes = []byte("")
 
 // https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1421135319
 type WechatMessageServer struct {
@@ -24,19 +23,18 @@ func NewMessageServer() *WechatMessageServer {
 }
 
 func (srv *WechatMessageServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// fmt.Println(r.RequestURI)
+	log.Println(r.RequestURI)
 	r.ParseForm()
 
 	// prepare callback urls
 	call_urls := r.Form["call"]
 	if len(call_urls) < 1 {
-		w.Write(emptyStringBytes)
 		return
 	}
 	query := srv.messageQuery(&r.Form)
 	for i, v := range call_urls {
 		call_urls[i] = srv.normalizeUrl(v, query)
-		//fmt.Printf("call: %s\n", call_urls[i])
+		log.Printf("call: %s\n", call_urls[i])
 	}
 
 	// verify callback urls
@@ -45,8 +43,6 @@ func (srv *WechatMessageServer) ServeHTTP(w http.ResponseWriter, r *http.Request
 		verify := srv.verifyCallback(call_urls, echostr)
 		if verify {
 			w.Write([]byte(echostr))
-		} else {
-			w.Write(emptyStringBytes)
 		}
 		return
 	}
@@ -55,7 +51,7 @@ func (srv *WechatMessageServer) ServeHTTP(w http.ResponseWriter, r *http.Request
 	defer r.Body.Close()
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		w.Write(emptyStringBytes)
+		return
 	}
 	data := srv.dispatchMessage(call_urls, body)
 	w.Write(data)
@@ -145,13 +141,14 @@ func (srv *WechatMessageServer) dispatchMessage(urls []string, body []byte) (res
 // Get wechat message query parameters
 func (srv *WechatMessageServer) messageQuery(form *url.Values) string {
 	signature, timestamp, nonce := form.Get("signature"), form.Get("timestamp"), form.Get("nonce")
-	echostr := form.Get("echostr")
-	if signature == "" {
-		signature = form.Get("msg_signature")
-	}
 	query := fmt.Sprintf("signature=%s&timestamp=%s&nonce=%s", signature, timestamp, nonce)
+
+	echostr := form.Get("echostr")
 	if echostr != "" {
 		query += fmt.Sprintf("&echostr=%s", echostr)
+	} else {
+		encrypt_type, msg_signature := form.Get("encrypt_type"), form.Get("msg_signature")
+		query += fmt.Sprintf("&encrypt_type=%s&msg_signature=%s", encrypt_type, msg_signature)
 	}
 	return query
 }

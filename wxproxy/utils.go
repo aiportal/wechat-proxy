@@ -5,6 +5,9 @@ package wxproxy
 
 import (
 	"fmt"
+	"net/http"
+	"io/ioutil"
+	"encoding/json"
 )
 
 // wechat error response
@@ -18,11 +21,12 @@ func (e *wxError) Success() bool {
 }
 
 func (e *wxError) String() string {
-	if e.ErrCode == 0 {
-		return ""
-	} else {
-		return fmt.Sprintf(`{"errcode": %d, "errmsg": "%s"}`, e.ErrCode, e.ErrMsg)
-	}
+	return fmt.Sprintf(`{"errcode": %d, "errmsg": "%s"}`, e.ErrCode, e.ErrMsg)
+}
+
+func (e *wxError) Serialize() []byte {
+	js := fmt.Sprintf(`{"errcode": %d, "errmsg": "%s"}`, e.ErrCode, e.ErrMsg)
+	return []byte(js)
 }
 
 func newError(err error) *wxError {
@@ -32,10 +36,18 @@ func newError(err error) *wxError {
 	return e
 }
 
-func (e *wxError) Error() string {
-	if e.ErrCode == 0 {
-		return ""
+func httpGetJson(url string, obj interface{}) (body []byte, err error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return
 	}
-	js := fmt.Sprintf(`{"errcode": %d, "errmsg": "%s"}`, e.ErrCode, e.ErrMsg)
-	return js
+	defer resp.Body.Close()
+
+	body, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(body, obj)
+	return
 }
