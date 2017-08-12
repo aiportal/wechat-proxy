@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"io/ioutil"
 	"encoding/json"
+	"math/rand"
+	"time"
 )
 
 // wechat error response
@@ -27,6 +29,13 @@ func (e *wxError) String() string {
 func (e *wxError) Serialize() []byte {
 	js := fmt.Sprintf(`{"errcode": %d, "errmsg": "%s"}`, e.ErrCode, e.ErrMsg)
 	return []byte(js)
+}
+
+func wxErrorStr(msg string) *wxError {
+	e := new(wxError)
+	e.ErrCode = -10001
+	e.ErrMsg = msg
+	return e
 }
 
 func newError(err error) *wxError {
@@ -50,4 +59,14 @@ func httpGetJson(url string, obj interface{}) (body []byte, err error) {
 
 	err = json.Unmarshal(body, obj)
 	return
+}
+
+func randomString(n int) string {
+	var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	rand.Seed(time.Now().Unix())
+    b := make([]rune, n)
+    for i := range b {
+        b[i] = letters[rand.Intn(len(letters))]
+    }
+    return string(b)
 }
