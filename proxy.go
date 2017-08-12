@@ -3,19 +3,20 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"wechat-proxy/wxproxy"
-	"io/ioutil"
 )
 
 func main() {
 
-	apiServer := wxproxy.NewApiServer()
-	http.Handle("/api", apiServer)
+	http.Handle("/api", wxproxy.NewApiServer())
 	http.Handle("/qyapi", wxproxy.NewQyServer())
 	http.Handle("/msg", wxproxy.NewMessageServer())
 	http.Handle("/auth", wxproxy.NewAuthServer())
+	http.Handle("/js", wxproxy.NewJsServer())
+	http.Handle("/card", wxproxy.NewCardServer())
 
 	//http.Handle("/crypto", wxproxy.NewCryptoServer())
 	http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
