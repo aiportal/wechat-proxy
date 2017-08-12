@@ -63,7 +63,7 @@ func sendTestAuthLink(accessToken, openid, link_base, link_info string) {
          {
              "title":"Wechat-Proxy Project",
              "url":"https://github.com/aiportal/wechat-proxy/blob/master/README.md",
-			 "picurl":"https://raw.githubusercontent.com/aiportal/wechat-proxy/master/WeChat-Proxy.png"
+			 "picurl":"https://raw.githubusercontent.com/aiportal/wechat-proxy/master/_doc/auth_test_icon.png"
          },
          {
              "title":"snsapi_base auth test",
