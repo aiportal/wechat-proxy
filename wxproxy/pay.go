@@ -62,14 +62,6 @@ type wxPayResult struct {
 	Code_url     string `xml:"code_url" json:"code_url"`
 }
 
-type CDATA string
-
-func (c CDATA) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
-	return e.EncodeElement(struct {
-		string `xml:",cdata"`
-	}{string(c)}, start)
-}
-
 type WechatPayServer struct {
 }
 
