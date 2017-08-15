@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"errors"
 )
 
 type wxCryptoMsg struct {
@@ -51,7 +52,7 @@ func (*wechatMsgCrypter) sha1Signature(args ...string) string {
 }
 
 // extract message string from encrypt package
-func (mc *wechatMsgCrypter) decryptMsg(body io.Reader) (msg []byte, appid string, err error) {
+func (mc *wechatMsgCrypter) DecryptPkg(body io.Reader, timestamp, nonce, signature string) (msg []byte, appid string, err error) {
 	body_bytes, err := ioutil.ReadAll(body)
 	if err != nil {
 		log.Println(err.Error())
@@ -64,17 +65,25 @@ func (mc *wechatMsgCrypter) decryptMsg(body io.Reader) (msg []byte, appid string
 		return
 	}
 
+	if signature != "" {
+		sign := mc.sha1Signature(mc.Token, timestamp, nonce, pkg.Encrypt)
+		if sign != signature {
+			err = errors.New("msg_signature fail")
+			return
+		}
+	}
+
 	data, err := base64.StdEncoding.DecodeString(pkg.Encrypt)
 	if err != nil {
 		return
 	}
-	msg, appid, err = mc.decryptMsgBody(data)
+	msg, appid, err = mc.decryptMsg(data)
 	return
 }
 
 // generate reply package
-func (mc *wechatMsgCrypter) encryptMsg(msg []byte, appid string) (body []byte, err error) {
-	data, err := mc.encryptMsgBody(msg, appid)
+func (mc *wechatMsgCrypter) EncryptPkg(msg []byte, appid string) (body []byte, err error) {
+	data, err := mc.encryptMsg(msg, appid)
 	if err != nil {
 		return
 	}
@@ -94,7 +103,7 @@ func (mc *wechatMsgCrypter) encryptMsg(msg []byte, appid string) (body []byte, e
 	return
 }
 
-func (mc *wechatMsgCrypter) decryptMsgBody(data []byte) (msg []byte, appid string, err error) {
+func (mc *wechatMsgCrypter) decryptMsg(data []byte) (msg []byte, appid string, err error) {
 	c, err := aes.NewCipher(mc.AesKey)
 	if err != nil {
 		return
@@ -117,7 +126,7 @@ func (mc *wechatMsgCrypter) decryptMsgBody(data []byte) (msg []byte, appid strin
 	return
 }
 
-func (mc *wechatMsgCrypter) encryptMsgBody(msg []byte, appid string) (data []byte, err error) {
+func (mc *wechatMsgCrypter) encryptMsg(msg []byte, appid string) (data []byte, err error) {
 	buf := new(bytes.Buffer)
 	err = binary.Write(buf, binary.BigEndian, int32(len(msg)))
 	if err != nil {

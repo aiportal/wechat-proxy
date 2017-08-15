@@ -12,6 +12,9 @@ func TestDecrypt(t *testing.T) {
 		AppId string
 		Token string
 		AesKey string
+		TimeStamp string
+		Nonce string
+		MsgSingature string
 		Url string
 		Package string
 		Encrypt string
@@ -20,6 +23,9 @@ func TestDecrypt(t *testing.T) {
 			AppId: "wx06766a90ab72960e",
 			Token: "www.aiportal.net",
 			AesKey: "XVeChLv7XLCpkHiPJTGrx6Ha18Yq9i6LCkHV1oxk3mw",
+			TimeStamp: "1502757162",
+			Nonce: "1106965505",
+			MsgSingature: "29e271bff094d2acbda57c07ad6c974042e0128c",
 			Url: "/crypto?&signature=5c5d814245855eb485df751e7b9be4a7f2622133&timestamp=1502757162&nonce=1106965505&encrypt_type=aes&msg_signature=29e271bff094d2acbda57c07ad6c974042e0128c",
 			Package: `<xml>
 <ToUserName><![CDATA[bfbd]]></ToUserName>
@@ -30,7 +36,6 @@ func TestDecrypt(t *testing.T) {
 			AppId: "wx06766a90ab72960e",
 			Token: "www.aiportal.net",
 			AesKey: "XVeChLv7XLCpkHiPJTGrx6Ha18Yq9i6LCkHV1oxk3mw",
-			Url: "/crypto?signature=9634db1ea2c276e10dafc29a8e781a19892535c5&timestamp=1502758613&nonce=951682770&encrypt_type=aes&msg_signature=d3f6647cb1f160aee9a8826133ff731883889a76",
 			Package: `<xml>
 <ToUserName><![CDATA[bfbd]]></ToUserName>
 <Encrypt><![CDATA[l63nDQa0ch+gmwilKdIGBi74a5ttz6mBwgjq3Pvsq7lU90nFYitSkIbxLNQdEqLx6lXHUrDsycT2V3M1xcbEoAr1aLFKzYlFJeM0Qp9UYNTNd8E6Qk5Wnz42yxkCr6ZO1WIBzlnLOahD0rGN+kx1s/EsrUHPu7SrgO9AQgsZgv8Y4wHWwbdtLLjr+e9T+5Gf93k0w1JJrzMlQfMbx9PlHaUdPcvHIgqPeCt0b92bQfciSUDlLygo+8iFCJ/Q2fPtWOKSFOKs42sAgPQn7IaN/gzmPKuWjT/NSxxBycRFSl+fQZfca63OxawyleF5SRcgnhjxBPb+VCCTqRGh0AoIjVYP7rkbW2Hk0U5qCBsW8VufB9jGScxTwHt4njqDqVe7/mKi28T92lwCCjGwPf7zpyaKOH9M1e7kNzmYXPQMhLcQB86sOuLDSerUUdBCHuYc5iRTMfF+Q7CYEFk2YeOKkgggD1ZaAdcpyEENITiMJIor4RoNVbGJIPXRCF57YNf9SpMThEs4JWGov8dFiCTsogwoY7jww77pP2dsafoATBo=]]></Encrypt>
@@ -43,7 +48,7 @@ func TestDecrypt(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		msg, appid, err := c.decryptMsg(bytes.NewReader([]byte(v.Package)))
+		msg, appid, err := c.DecryptPkg(bytes.NewReader([]byte(v.Package)), v.TimeStamp, v.Nonce, v.MsgSingature)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -81,7 +86,7 @@ func TestEncrypt(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		pkg, err := c.encryptMsg([]byte(v.Message), v.AppId)
+		pkg, err := c.EncryptPkg([]byte(v.Message), v.AppId)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -89,7 +94,7 @@ func TestEncrypt(t *testing.T) {
 			t.Fatal("encrypt fail")
 		}
 
-		msg, appid, err := c.decryptMsg(bytes.NewReader([]byte(pkg)))
+		msg, appid, err := c.DecryptPkg(bytes.NewReader([]byte(pkg)), "", "", "")
 		if string(msg) != v.Message {
 			t.Fatal("decrypt fail")
 		}

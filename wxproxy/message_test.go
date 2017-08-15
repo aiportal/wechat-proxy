@@ -17,14 +17,14 @@ func TestMessageServer(t *testing.T) {
 		Result string
 	}{
 		{
-			Url: "/svc?echostr=test",
+			Url: "/msg?echostr=test",
 			Calls: []string{"/svc1"},
 			Result: "test",
 		},
 		{
-			Url: "/svc?echostr=test",
+			Url: "/msg?echostr=test",
 			Calls: []string{"/svc1", "/svc2"},
-			Result: "",
+			Result: "test",
 		},
 	}
 
@@ -35,19 +35,19 @@ func TestMessageServer(t *testing.T) {
 		Result string
 	}{
 		{
-			Url: "/svc?",
+			Url: "/msg?",
 			Calls: []string{"/svc1"},
 			Body: "<xml>...</xml>",
 			Result: "<xml>...</xml>",
 		},
 		{
-			Url: "/svc?",
+			Url: "/msg?",
 			Calls: []string{"/svc2"},
 			Body: "<xml>...</xml>",
 			Result: "",
 		},
 		{
-			Url: "/svc?",
+			Url: "/msg?",
 			Calls: []string{"/svc1", "/svc2"},
 			Body: "<xml>...</xml>",
 			Result: "<xml>...</xml>",
@@ -55,7 +55,7 @@ func TestMessageServer(t *testing.T) {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/svc", NewMessageServer())
+	mux.Handle("/msg", NewMessageServer())
 	mux.HandleFunc("/svc1", func(w http.ResponseWriter, r *http.Request){
 		r.ParseForm()
 		echostr := r.Form.Get("echostr")
@@ -93,6 +93,7 @@ func TestMessageServer(t *testing.T) {
 			log.Fatal(err)
 		}
 		if string(body) != v.Result {
+			log.Printf("body: %s, result: %s\n", string(body), v.Result)
 			t.Fatal()
 		}
 	}
