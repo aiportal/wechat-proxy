@@ -5,6 +5,7 @@ import (
 	"net/http"
 )
 
+// doc: https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1421141115
 type wxCardTicket struct {
 	wxError
 	Ticket  string `json:"ticket"`

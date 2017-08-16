@@ -63,6 +63,7 @@ type wxPayResult struct {
 }
 
 type WechatPayServer struct {
+	wechatClient
 }
 
 func NewPayServer() *WechatPayServer {
@@ -101,7 +102,7 @@ func (srv *WechatPayServer) parseParam(r *http.Request) (p *wxPayParam, err erro
 	p.AppId = f.Get("appid")
 	p.Mch_id = f.Get("mch_id")
 	p.Mch_key = f.Get("mch_key")
-	p.Notify_url = f.Get("notify_url")
+	p.Notify_url = srv.normalizeUrl(r, f.Get("notify_url"), "")
 	p.Body = f.Get("body")
 	p.Out_trade_no = f.Get("out_trade_no")
 	p.Total_fee = f.Get("total_fee")

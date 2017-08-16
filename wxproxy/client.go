@@ -3,6 +3,7 @@ package wxproxy
 import (
 	"net/http"
 	"fmt"
+	"strings"
 )
 
 type wechatClient struct {
@@ -14,6 +15,20 @@ func (c *wechatClient) hostUrl(r *http.Request) string {
 		scheme = "https://"
 	}
 	return fmt.Sprintf("%s%s", scheme, r.Host)
+}
+
+func (srv *wechatClient) normalizeUrl(r *http.Request, url string, query string) string {
+	if strings.HasPrefix(url, "/") {
+		url = srv.hostUrl(r) + url
+	} else if !strings.HasPrefix(url, "http") {
+		url = "http://" + url
+	}
+	if !strings.Contains(url, "?") {
+		url += "?"
+	} else {
+		url += "&"
+	}
+	return url + query
 }
 
 func (c *wechatClient) getAccessToken(hostUrl, appid, secret string) (accessToken string, err *wxError) {

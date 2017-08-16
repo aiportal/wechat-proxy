@@ -13,14 +13,16 @@ func main() {
 
 	http.Handle("/api", wxproxy.NewApiServer())
 	http.Handle("/qyapi", wxproxy.NewQyServer())
+
 	http.Handle("/msg", wxproxy.NewMessageServer())
 	http.Handle("/msg/json", wxproxy.NewMessageServer())
 	http.Handle("/auth", wxproxy.NewAuthServer())
 	http.Handle("/pay", wxproxy.NewPayServer())
+
 	http.Handle("/jsapi", wxproxy.NewJsServer())
+	http.Handle("/jscard", wxproxy.NewCardServer())
 	http.Handle("/js/config", wxproxy.NewJsConfigServer())
-	//http.Handle("/js/pay", wxproxy.NewJsPayServer())
-	//http.Handle("/card", wxproxy.NewCardServer())
+	http.Handle("/js/pay", wxproxy.NewJsPayServer())
 
 	http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
@@ -32,11 +34,9 @@ func main() {
 		w.Write(body)
 		log.Println(string(body))
 	})
-
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
 	host, port := parseArgs()
-
 	address := fmt.Sprintf("%s:%d", host, port)
 	fmt.Printf("wechat proxy starting at %q ...\n", address)
 	log.Fatal(http.ListenAndServe(address, nil))
