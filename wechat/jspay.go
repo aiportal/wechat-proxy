@@ -1,14 +1,14 @@
-package wxproxy
+package wechat
 
 import (
-	"net/http"
-	"fmt"
-	"time"
-	"strings"
-	"sort"
 	"crypto/md5"
 	"encoding/json"
+	"fmt"
 	"log"
+	"net/http"
+	"sort"
+	"strings"
+	"time"
 )
 
 type wxPayJs struct {
@@ -20,7 +20,7 @@ type wxPayJs struct {
 }
 
 type WechatJsPayServer struct {
-	wechatClient
+	WechatClient
 }
 
 func NewJsPayServer() *WechatJsPayServer {
@@ -32,7 +32,7 @@ func (srv *WechatJsPayServer) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	log.Println(r.RequestURI)
 	r.ParseForm()
 
-	var wxErr *wxError
+	var wxErr *WxError
 	prepay_id, wxErr := srv.getPrepayId(r)
 	if wxErr != nil {
 		w.Write(wxErr.Serialize())
@@ -46,19 +46,19 @@ func (srv *WechatJsPayServer) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	bs, err := json.Marshal(sign)
 	if err != nil {
-		w.Write(newError(err).Serialize())
+		w.Write(NewError(err).Serialize())
 		return
 	}
 	w.Write(bs)
 }
 
-func (srv *WechatJsPayServer) getPrepayId(r *http.Request) (prepayId string, wxErr *wxError) {
-	pay_url := fmt.Sprintf("%s/pay?%s", srv.hostUrl(r), r.URL.RawQuery)
+func (srv *WechatJsPayServer) getPrepayId(r *http.Request) (prepayId string, wxErr *WxError) {
+	pay_url := fmt.Sprintf("%s/pay?%s", srv.HostUrl(r), r.URL.RawQuery)
 
-	var pay wxPayResult
-	_, err := httpGetJson(pay_url, &pay)
+	var pay wxPayOrder
+	_, err := HttpGetJson(pay_url, &pay)
 	if err != nil {
-		wxErr = newError(err)
+		wxErr = NewError(err)
 		return
 	}
 	if pay.Return_code != payResultSuccess {
@@ -80,7 +80,7 @@ func (srv *WechatJsPayServer) paySignature(appid, prepayId, mchKey string) (sign
 	sign.Package = fmt.Sprintf("prepay_id=%s", prepayId)
 	sign.SignType = "MD5"
 
-	arr := []string {
+	arr := []string{
 		fmt.Sprintf("appId=%s", appid),
 		fmt.Sprintf("timeStamp=%d", sign.Timestamp),
 		fmt.Sprintf("nonceStr=%s", sign.NonceStr),
@@ -95,4 +95,3 @@ func (srv *WechatJsPayServer) paySignature(appid, prepayId, mchKey string) (sign
 	sign.PaySign = fmt.Sprintf("%X", hash)
 	return
 }
-

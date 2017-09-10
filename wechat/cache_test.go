@@ -1,30 +1,30 @@
-package wxproxy
+package wechat
 
 import (
+	"fmt"
 	"testing"
 	"time"
-	"fmt"
 )
 
 func TestCacheMap(t *testing.T) {
-	ts_data := []struct{
-		key string
+	ts_data := []struct {
+		key   string
 		value interface{}
 	}{
 		{
 			key: "aaa",
-			value: struct{
+			value: struct {
 				a string
 				b string
 			}{a: "a", b: "b"},
 		},
 		{
-			key: "bbb",
+			key:   "bbb",
 			value: "test",
 		},
 	}
 
-	var cache = NewCacheMap(1 * time.Second, 1)
+	var cache = NewCacheMap(1*time.Second, 1)
 	for _, v := range ts_data {
 		cache.Set(v.key, v.value)
 	}

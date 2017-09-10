@@ -1,34 +1,34 @@
-package wxproxy
+package wechat
 
 import (
-	"testing"
-	"net/http/httptest"
 	"net/http"
+	"net/http/httptest"
+	"testing"
 )
 
 func TestWechatClient(t *testing.T) {
 
-	ts_data := []struct{
-		Appid string
+	ts_data := []struct {
+		Appid  string
 		Secret string
 	}{
 		{
-			Appid: "wx06766a90ab72960e",
+			Appid:  "wx06766a90ab72960e",
 			Secret: "05bd8b6064a9941b72ee44d5b3bfdb6a",
 		},
 	}
 
 	mux := http.NewServeMux()
 	mux.Handle("/api", NewApiServer())
-	mux.Handle("/jsapi", NewJsServer())
+	mux.Handle("/jsapi", NewJsTicketServer())
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
 
 	for _, v := range ts_data {
-		c := &wechatClient{}
+		c := &WechatClient{}
 
 		// test access_token
-		token1, err := c.getAccessToken(ts.URL, v.Appid, v.Secret)
+		token1, err := c.GetAccessToken(ts.URL, v.Appid, v.Secret)
 		if err != nil {
 			t.Fatal(err)
 			return
@@ -37,7 +37,7 @@ func TestWechatClient(t *testing.T) {
 			t.Fatal("empty access_token")
 			return
 		}
-		token2, err := c.getAccessToken(ts.URL, v.Appid, v.Secret)
+		token2, err := c.GetAccessToken(ts.URL, v.Appid, v.Secret)
 		if err != nil {
 			t.Fatal(err)
 			return
@@ -48,7 +48,7 @@ func TestWechatClient(t *testing.T) {
 		}
 
 		// test js ticket
-		ticket1, err := c.getJsTicket(ts.URL, v.Appid, v.Secret)
+		ticket1, err := c.GetJsTicket(ts.URL, v.Appid, v.Secret)
 		if err != nil {
 			t.Fatal(err)
 			return
@@ -57,7 +57,7 @@ func TestWechatClient(t *testing.T) {
 			t.Fatal("empty jsapi_ticket")
 			return
 		}
-		ticket2, err := c.getJsTicket(ts.URL, v.Appid, v.Secret)
+		ticket2, err := c.GetJsTicket(ts.URL, v.Appid, v.Secret)
 		if err != nil {
 			t.Fatal(err)
 			return

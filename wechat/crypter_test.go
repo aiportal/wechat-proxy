@@ -1,40 +1,40 @@
-package wxproxy
+package wechat
 
 import (
-	"testing"
 	"bytes"
 	"strings"
+	"testing"
 )
 
 func TestDecrypt(t *testing.T) {
 
-	ts_data := []struct{
-		AppId string
-		Token string
-		AesKey string
-		TimeStamp string
-		Nonce string
+	ts_data := []struct {
+		AppId        string
+		Token        string
+		AesKey       string
+		TimeStamp    string
+		Nonce        string
 		MsgSingature string
-		Url string
-		Package string
-		Encrypt string
+		Url          string
+		Package      string
+		Encrypt      string
 	}{
 		{
-			AppId: "wx06766a90ab72960e",
-			Token: "www.aiportal.net",
-			AesKey: "XVeChLv7XLCpkHiPJTGrx6Ha18Yq9i6LCkHV1oxk3mw",
-			TimeStamp: "1502757162",
-			Nonce: "1106965505",
+			AppId:        "wx06766a90ab72960e",
+			Token:        "www.aiportal.net",
+			AesKey:       "XVeChLv7XLCpkHiPJTGrx6Ha18Yq9i6LCkHV1oxk3mw",
+			TimeStamp:    "1502757162",
+			Nonce:        "1106965505",
 			MsgSingature: "29e271bff094d2acbda57c07ad6c974042e0128c",
-			Url: "/crypto?&signature=5c5d814245855eb485df751e7b9be4a7f2622133&timestamp=1502757162&nonce=1106965505&encrypt_type=aes&msg_signature=29e271bff094d2acbda57c07ad6c974042e0128c",
+			Url:          "/crypto?&signature=5c5d814245855eb485df751e7b9be4a7f2622133&timestamp=1502757162&nonce=1106965505&encrypt_type=aes&msg_signature=29e271bff094d2acbda57c07ad6c974042e0128c",
 			Package: `<xml>
 <ToUserName><![CDATA[bfbd]]></ToUserName>
 <Encrypt><![CDATA[ajTxGtmDjoECHpJkotp9Ok8elXjtUQ/BP1F795qu/7r9Efmeni7sRXS7f/RfJNgTshi/8XbiKx72Nri3kltaJX1t3QpmUvNufD7dA3ekwVp/1DLcGP65YtSgsrBTa9RoVEvby23X+7+X4mhBM5JzS8YFztsJEw3vxF5iYFOV4rdFrszli1ddaZRNZAGQDabcJ/rQIONxcog0t5ZGUIb+HuawqpNGtfE/wOmMJ0P5KVrkZP9U2+RbMCJQS8+HPUxs7ofJL7E7KicJ3JS41fDXI2IJjVTGOO+ddBmQVXLPX0xvKVUtjxj0VPea8/lFKSUIQlnqzWxJ7QP9/XpYIWVWHhNr2O3fXQ5SfberZlEPCEuudHklsjyOueDet06rNF5+28v0TIGuT7OdjolTG6r/oSyMRlO+DsKiyIaWWn0a8e8Y+CO8F4hoPdM9NWHW4pxCeKatu7nsAQOfWZc3pcnHBo8+60TLnmDfmR6eSgQTnbPmetgrDsxFtOgebk+y4nLq]]></Encrypt>
 </xml>`,
 		},
 		{
-			AppId: "wx06766a90ab72960e",
-			Token: "www.aiportal.net",
+			AppId:  "wx06766a90ab72960e",
+			Token:  "www.aiportal.net",
 			AesKey: "XVeChLv7XLCpkHiPJTGrx6Ha18Yq9i6LCkHV1oxk3mw",
 			Package: `<xml>
 <ToUserName><![CDATA[bfbd]]></ToUserName>
@@ -62,15 +62,15 @@ func TestDecrypt(t *testing.T) {
 }
 
 func TestEncrypt(t *testing.T) {
-	ts_data := []struct{
-		AppId string
-		Token string
-		AesKey string
+	ts_data := []struct {
+		AppId   string
+		Token   string
+		AesKey  string
 		Message string
 	}{
 		{
-			AppId: "wx06766a90ab72960e",
-			Token: "www.aiportal.net",
+			AppId:  "wx06766a90ab72960e",
+			Token:  "www.aiportal.net",
 			AesKey: "XVeChLv7XLCpkHiPJTGrx6Ha18Yq9i6LCkHV1oxk3mw",
 			Message: `<xml>
 <ToUserName><![CDATA[toUser]]></ToUserName>

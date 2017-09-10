@@ -1,4 +1,4 @@
-package wxproxy
+package wechat
 
 import (
 	"crypto/sha1"
@@ -22,8 +22,8 @@ type wxJsConfig struct {
 }
 
 type WechatJsConfigServer struct {
-	wechatClient
-	configMap *cacheMap
+	WechatClient
+	configMap *CacheMap
 }
 
 func NewJsConfigServer() *WechatJsConfigServer {
@@ -42,7 +42,7 @@ func (srv *WechatJsConfigServer) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	}
 
 	// signature
-	wxErr = srv.jsSignature(cfg, srv.hostUrl(r), r.Referer())
+	wxErr = srv.jsSignature(cfg, srv.HostUrl(r), r.Referer())
 	if wxErr != nil {
 		w.Write(wxErr.Serialize())
 		return
@@ -51,14 +51,14 @@ func (srv *WechatJsConfigServer) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	// return config script
 	bs, err := json.Marshal(cfg)
 	if err != nil {
-		w.Write(newError(err).Serialize())
+		w.Write(NewError(err).Serialize())
 		return
 	}
 	resp_body := fmt.Sprintf(`wx.config(%s)`, string(bs))
 	w.Write([]byte(resp_body))
 }
 
-func (srv *WechatJsConfigServer) parseParam(r *http.Request) (cfg *wxJsConfig, wxErr *wxError) {
+func (srv *WechatJsConfigServer) parseParam(r *http.Request) (cfg *wxJsConfig, wxErr *WxError) {
 	appid, secret := r.Form.Get("appid"), r.Form.Get("secret")
 	debug, api_list := r.Form.Get("debug"), r.Form.Get("apilist")
 
@@ -80,9 +80,9 @@ func (srv *WechatJsConfigServer) parseParam(r *http.Request) (cfg *wxJsConfig, w
 	return
 }
 
-func (srv *WechatJsConfigServer) jsSignature(cfg *wxJsConfig, hostUrl, url string) (wxErr *wxError) {
+func (srv *WechatJsConfigServer) jsSignature(cfg *wxJsConfig, hostUrl, url string) (wxErr *WxError) {
 	// get jsapi_ticket
-	ticket, wxErr := srv.getJsTicket(hostUrl, cfg.Appid, cfg.Secret)
+	ticket, wxErr := srv.GetJsTicket(hostUrl, cfg.Appid, cfg.Secret)
 	if wxErr != nil {
 		return
 	}

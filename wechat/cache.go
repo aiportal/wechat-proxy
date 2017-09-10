@@ -1,6 +1,7 @@
-package wxproxy
+package wechat
 
 import (
+	"errors"
 	"sync"
 	"time"
 )
@@ -10,7 +11,7 @@ type cacheItem struct {
 	expire int64
 }
 
-type cacheMap struct {
+type CacheMap struct {
 	m      map[string]cacheItem
 	lock   sync.RWMutex
 	config struct {
@@ -19,22 +20,22 @@ type cacheMap struct {
 	}
 }
 
-func NewCacheMap(duration time.Duration, limit int) *cacheMap {
-	tm := new(cacheMap)
+func NewCacheMap(duration time.Duration, limit int) *CacheMap {
+	tm := new(CacheMap)
 	tm.m = make(map[string]cacheItem)
 	tm.config.duration = duration
 	tm.config.limit = limit
 	return tm
 }
 
-func (tm *cacheMap) Set(key string, value interface{}) {
+func (tm *CacheMap) Set(key string, value interface{}) {
 	expire := time.Now().Add(tm.config.duration).Unix()
 	tm.lock.Lock()
 	defer tm.lock.Unlock()
 	tm.m[key] = cacheItem{value: value, expire: expire}
 }
 
-func (tm *cacheMap) Get(key string) (value interface{}, success bool) {
+func (tm *CacheMap) Get(key string) (value interface{}, success bool) {
 	tm.lock.RLock()
 	defer tm.lock.RUnlock()
 	if token, ok := tm.m[key]; ok {
@@ -44,13 +45,13 @@ func (tm *cacheMap) Get(key string) (value interface{}, success bool) {
 	return
 }
 
-func (tm *cacheMap) Remove(key string) {
+func (tm *CacheMap) Remove(key string) {
 	tm.lock.Lock()
 	defer tm.lock.Unlock()
 	delete(tm.m, key)
 }
 
-func (tm *cacheMap) Shrink() {
+func (tm *CacheMap) Shrink() {
 	tm.lock.Lock()
 	defer tm.lock.Unlock()
 	if len(tm.m) < tm.config.limit {
@@ -63,3 +64,5 @@ func (tm *cacheMap) Shrink() {
 		}
 	}
 }
+
+var ErrCacheTimeout = errors.New("cache timeout")

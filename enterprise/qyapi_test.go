@@ -1,4 +1,4 @@
-package wxproxy
+package enterprise
 
 import (
 	"encoding/json"

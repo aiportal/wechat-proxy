@@ -1,13 +1,13 @@
-package wxproxy
+package wechat
 
 import (
-	"testing"
-	"net/http"
-	"io/ioutil"
 	"fmt"
+	"io/ioutil"
 	"log"
-	"strings"
+	"net/http"
 	"os"
+	"strings"
+	"testing"
 )
 
 func TestAuthServer(t *testing.T) {
@@ -23,12 +23,12 @@ func TestAuthServer(t *testing.T) {
 	openid := "o3u5it9y28OQoXLXh-s-EPhY3xu8"
 
 	type AuthInfo struct {
-		AuthUrl		string	`json:"auth_uri"`
-		Expires		uint32	`json:"expires_in"`
+		AuthUrl string `json:"auth_uri"`
+		Expires uint32 `json:"expires_in"`
 	}
 
 	// get auth proxy url
-	_url := hostUrl + fmt.Sprintf("/auth?appid=%s&secret=%s&redirect_uri=%s", appid, secret, hostUrl + "/echo")
+	_url := hostUrl + fmt.Sprintf("/auth?appid=%s&secret=%s&redirect_uri=%s", appid, secret, hostUrl+"/echo")
 	ts_urls := []string{
 		_url,
 		_url + "&scope=snsapi_userinfo",
@@ -37,7 +37,7 @@ func TestAuthServer(t *testing.T) {
 	auth_urls := []string{"", ""}
 	for i, _url := range ts_urls {
 		var info = &AuthInfo{}
-		body, err := httpGetJson(_url, info)
+		body, err := HttpGetJson(_url, info)
 		if err != nil {
 			fmt.Println("body: " + string(body))
 			t.Fatal(err)
@@ -46,8 +46,8 @@ func TestAuthServer(t *testing.T) {
 	}
 
 	// send test message
-	wxClient := &wechatClient{}
-	access_token, err := wxClient.getAccessToken(hostUrl, appid, secret)
+	wxClient := &WechatClient{}
+	access_token, err := wxClient.GetAccessToken(hostUrl, appid, secret)
 	if err != nil {
 		fmt.Println(err.String())
 		t.Fatal(err)

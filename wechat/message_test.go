@@ -1,62 +1,62 @@
-package wxproxy
+package wechat
 
 import (
-	"testing"
-	"net/http/httptest"
-	"net/http"
-	"log"
 	"io/ioutil"
+	"log"
+	"net/http"
+	"net/http/httptest"
 	"strings"
+	"testing"
 )
 
 func TestMessageServer(t *testing.T) {
 
-	ts_get := []struct{
-		Url string
-		Calls []string
+	ts_get := []struct {
+		Url    string
+		Calls  []string
 		Result string
 	}{
 		{
-			Url: "/msg?echostr=test",
-			Calls: []string{"/svc1"},
+			Url:    "/msg?echostr=test",
+			Calls:  []string{"/svc1"},
 			Result: "test",
 		},
 		{
-			Url: "/msg?echostr=test",
-			Calls: []string{"/svc1", "/svc2"},
+			Url:    "/msg?echostr=test",
+			Calls:  []string{"/svc1", "/svc2"},
 			Result: "test",
 		},
 	}
 
-	ts_post := []struct{
-		Url string
-		Calls []string
-		Body string
+	ts_post := []struct {
+		Url    string
+		Calls  []string
+		Body   string
 		Result string
 	}{
 		{
-			Url: "/msg?",
-			Calls: []string{"/svc1"},
-			Body: "<xml>...</xml>",
+			Url:    "/msg?",
+			Calls:  []string{"/svc1"},
+			Body:   "<xml>...</xml>",
 			Result: "<xml>...</xml>",
 		},
 		{
-			Url: "/msg?",
-			Calls: []string{"/svc2"},
-			Body: "<xml>...</xml>",
+			Url:    "/msg?",
+			Calls:  []string{"/svc2"},
+			Body:   "<xml>...</xml>",
 			Result: "",
 		},
 		{
-			Url: "/msg?",
-			Calls: []string{"/svc1", "/svc2"},
-			Body: "<xml>...</xml>",
+			Url:    "/msg?",
+			Calls:  []string{"/svc1", "/svc2"},
+			Body:   "<xml>...</xml>",
 			Result: "<xml>...</xml>",
 		},
 	}
 
 	mux := http.NewServeMux()
 	mux.Handle("/msg", NewMessageServer())
-	mux.HandleFunc("/svc1", func(w http.ResponseWriter, r *http.Request){
+	mux.HandleFunc("/svc1", func(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 		echostr := r.Form.Get("echostr")
 		if echostr != "" {
@@ -71,7 +71,7 @@ func TestMessageServer(t *testing.T) {
 		}
 		w.Write(body)
 	})
-	mux.HandleFunc("/svc2", func(w http.ResponseWriter, r *http.Request){
+	mux.HandleFunc("/svc2", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(""))
 	})
 

@@ -1,23 +1,23 @@
-package wxproxy
+package wechat
 
 import (
 	"bytes"
+	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"reflect"
 	"strings"
 	"time"
-	"encoding/xml"
-	"encoding/json"
-	"reflect"
 )
 
 const messageRequestTimeout = 5 * time.Second
 
 // doc: https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1421135319
 type WechatMessageServer struct {
-	wechatClient
+	WechatClient
 }
 
 func NewMessageServer() *WechatMessageServer {
@@ -208,7 +208,7 @@ func (srv *WechatMessageServer) msgQuery(r *http.Request) string {
 // Get absolute url contain http:// or https://
 func (srv *WechatMessageServer) normalizeUrl(r *http.Request, url string, query string) string {
 	if strings.HasPrefix(url, "/") {
-		url = srv.hostUrl(r) + url
+		url = srv.HostUrl(r) + url
 	} else if !strings.HasPrefix(url, "http") {
 		url = "http://" + url
 	}

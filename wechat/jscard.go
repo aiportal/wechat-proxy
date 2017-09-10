@@ -1,4 +1,4 @@
-package wxproxy
+package wechat
 
 import (
 	"fmt"
@@ -7,14 +7,14 @@ import (
 
 // doc: https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1421141115
 type wxCardTicket struct {
-	wxError
+	WxError
 	Ticket  string `json:"ticket"`
 	Expires uint32 `json:"expires_in"`
 }
 
 type WechatCardServer struct {
-	wechatClient
-	ticketMap *cacheMap
+	WechatClient
+	ticketMap *CacheMap
 }
 
 func NewCardServer() *WechatCardServer {
@@ -29,8 +29,8 @@ func (srv *WechatCardServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	access_token := r.Form.Get("access_token")
 
 	if access_token == "" {
-		var err *wxError
-		access_token, err = srv.getAccessToken(srv.hostUrl(r), appid, secret)
+		var err *WxError
+		access_token, err = srv.GetAccessToken(srv.HostUrl(r), appid, secret)
 		if err != nil {
 			w.Write(err.Serialize())
 			return
@@ -46,9 +46,9 @@ func (srv *WechatCardServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	card_base_url := "https://api.weixin.qq.com/cgi-bin/ticket/getticket"
 	_url := fmt.Sprintf("%s?access_token=%s&type=wx_card", card_base_url, access_token)
 	var t wxJsTicket
-	body, err := httpGetJson(_url, &t)
+	body, err := HttpGetJson(_url, &t)
 	if err != nil {
-		w.Write(newError(err).Serialize())
+		w.Write(NewError(err).Serialize())
 		return
 	}
 	if !t.Success() {

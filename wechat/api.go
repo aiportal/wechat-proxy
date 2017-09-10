@@ -1,4 +1,4 @@
-package wxproxy
+package wechat
 
 import (
 	"crypto/md5"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -17,15 +18,15 @@ const (
 	tokenCacheLimit = 100
 )
 
-type wxAccessToken struct {
-	wxError
+type WxAccessToken struct {
+	WxError
 	AccessToken string `json:"access_token"`
 	ExpiresIn   uint64 `json:"expires_in"`
 }
 
 // doc: https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1421140183
 type WechatApiServer struct {
-	tokenMap *cacheMap
+	tokenMap *CacheMap
 }
 
 func NewApiServer() *WechatApiServer {
@@ -40,20 +41,23 @@ func (srv *WechatApiServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// find token
 	key := srv.hashKey(appid, secret)
+	if strings.HasSuffix(r.URL.Path, "/new") {
+		srv.tokenMap.Remove(key)
+	}
 	if value, ok := srv.tokenMap.Get(key); ok {
 		w.Write(value.([]byte))
 		return
 	}
 
-	token := &wxAccessToken{}
+	token := &WxAccessToken{}
 	_url := srv.accessTokenUrl(appid, secret)
 	body, err := srv.httpGetJson(_url, token)
 	if err != nil {
-		w.Write([]byte(newError(err).String()))
+		w.Write([]byte(NewError(err).String()))
 		return
 	}
 	if !token.Success() {
-		w.Write([]byte(token.wxError.String()))
+		w.Write([]byte(token.WxError.String()))
 		return
 	}
 

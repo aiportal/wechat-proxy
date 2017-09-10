@@ -1,4 +1,4 @@
-package wxproxy
+package wechat
 
 import (
 	"encoding/json"

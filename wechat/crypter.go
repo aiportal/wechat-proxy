@@ -1,4 +1,4 @@
-package wxproxy
+package wechat
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,7 +17,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-	"errors"
 )
 
 type wxCryptoMsg struct {

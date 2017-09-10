@@ -1,35 +1,29 @@
-package wxproxy
+package wechat
 
 import (
 	"fmt"
 	"net/http"
 )
 
-type wxJsTicket struct {
-	wxError
-	Ticket  string `json:"ticket"`
-	Expires uint32 `json:"expires_in"`
+type WechatJsTicketServer struct {
+	WechatClient
+	ticketMap *CacheMap
 }
 
-type WechatJsServer struct {
-	wechatClient
-	ticketMap *cacheMap
-}
-
-func NewJsServer() *WechatJsServer {
-	srv := new(WechatJsServer)
+func NewJsTicketServer() *WechatJsTicketServer {
+	srv := new(WechatJsTicketServer)
 	srv.ticketMap = NewCacheMap(tokenCacheDuration, tokenCacheLimit)
 	return srv
 }
 
-func (srv *WechatJsServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (srv *WechatJsTicketServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	appid, secret := r.Form.Get("appid"), r.Form.Get("secret")
 	access_token := r.Form.Get("access_token")
 
 	if access_token == "" {
-		var err *wxError
-		access_token, err = srv.getAccessToken(srv.hostUrl(r), appid, secret)
+		var err *WxError
+		access_token, err = srv.GetAccessToken(srv.HostUrl(r), appid, secret)
 		if err != nil {
 			w.Write(err.Serialize())
 			return
@@ -45,9 +39,9 @@ func (srv *WechatJsServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	jsapi_base_url := "https://api.weixin.qq.com/cgi-bin/ticket/getticket"
 	_url := fmt.Sprintf("%s?access_token=%s&type=jsapi", jsapi_base_url, access_token)
 	var t wxJsTicket
-	body, err := httpGetJson(_url, &t)
+	body, err := HttpGetJson(_url, &t)
 	if err != nil {
-		w.Write(newError(err).Serialize())
+		w.Write(NewError(err).Serialize())
 		return
 	}
 	if !t.Success() {
@@ -59,4 +53,10 @@ func (srv *WechatJsServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	srv.ticketMap.Set(access_token, body)
 	go srv.ticketMap.Shrink()
 	return
+}
+
+type wxJsTicket struct {
+	WxError
+	Ticket  string `json:"ticket"`
+	Expires uint32 `json:"expires_in"`
 }
