@@ -33,51 +33,34 @@ func NewJsConfigServer() *WechatJsConfigServer {
 
 func (srv *WechatJsConfigServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
+	f := r.Form
 
 	// parse
-	cfg, wxErr := srv.parseParam(r)
-	if wxErr != nil {
-		w.Write(wxErr.Serialize())
-		return
+	config := &wxJsConfig{
+		Appid: f.Get("appid"),
+		Secret: f.Get("secret"),
+		Debug: strings.EqualFold(f.Get("debug"), "true"),
+		JsApiList: wxApiList,
+	}
+	if f.Get("apilist") != "" {
+		config.JsApiList = strings.Split(f.Get("apilist"), ",")
 	}
 
 	// signature
-	wxErr = srv.jsSignature(cfg, srv.HostUrl(r), r.Referer())
+	wxErr := srv.jsSignature(config, srv.HostUrl(r), r.Referer())
 	if wxErr != nil {
 		w.Write(wxErr.Serialize())
 		return
 	}
 
 	// return config script
-	bs, err := json.Marshal(cfg)
+	bs, err := json.Marshal(config)
 	if err != nil {
 		w.Write(NewError(err).Serialize())
 		return
 	}
 	resp_body := fmt.Sprintf(`wx.config(%s)`, string(bs))
 	w.Write([]byte(resp_body))
-}
-
-func (srv *WechatJsConfigServer) parseParam(r *http.Request) (cfg *wxJsConfig, wxErr *WxError) {
-	appid, secret := r.Form.Get("appid"), r.Form.Get("secret")
-	debug, api_list := r.Form.Get("debug"), r.Form.Get("apilist")
-
-	// check request parameters
-	if appid == "" || secret == "" {
-		wxErr = wxErrorStr("parameters: appid, secret, debug(optinal), apilist(optinal)")
-		return
-	}
-
-	// store config info
-	cfg = new(wxJsConfig)
-	cfg.Appid = appid
-	cfg.Secret = secret
-	if strings.EqualFold(debug, "true") {
-		cfg.Debug = true
-	}
-	cfg.JsApiList = strings.Split(api_list, ",")
-
-	return
 }
 
 func (srv *WechatJsConfigServer) jsSignature(cfg *wxJsConfig, hostUrl, url string) (wxErr *WxError) {
@@ -99,4 +82,42 @@ func (srv *WechatJsConfigServer) jsSignature(cfg *wxJsConfig, hostUrl, url strin
 	cfg.Signature = signature
 
 	return
+}
+
+var wxApiList = []string{
+	"onMenuShareTimeline",
+	"onMenuShareAppMessage",
+	"onMenuShareQQ",
+	"onMenuShareWeibo",
+	"onMenuShareQZone",
+	"startRecord",
+	"stopRecord",
+	"onVoiceRecordEnd",
+	"playVoice",
+	"pauseVoice",
+	"stopVoice",
+	"onVoicePlayEnd",
+	"uploadVoice",
+	"downloadVoice",
+	"chooseImage",
+	"previewImage",
+	"uploadImage",
+	"downloadImage",
+	"translateVoice",
+	"getNetworkType",
+	"openLocation",
+	"getLocation",
+	"hideOptionMenu",
+	"showOptionMenu",
+	"hideMenuItems",
+	"showMenuItems",
+	"hideAllNonBaseMenuItem",
+	"showAllNonBaseMenuItem",
+	"closeWindow",
+	"scanQRCode",
+	"chooseWXPay",
+	"openProductSpecificView",
+	"addCard",
+	"chooseCard",
+	"openCard",
 }

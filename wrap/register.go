@@ -40,11 +40,11 @@ func (srv *RegisterServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check appid and secret
-	//_, wxErr := srv.GetAccessToken(srv.HostUrl(r), app.AppId, app.Secret)
-	//if wxErr != nil {
-	//	w.Write(wxErr.Serialize())
-	//	return
-	//}
+	_, wxErr := srv.GetAccessToken(srv.HostUrl(r), app.AppId, app.Secret)
+	if wxErr != nil {
+		w.Write(wxErr.Serialize())
+		return
+	}
 
 	// store app info
 	err = NewStorage().SaveApp(app)

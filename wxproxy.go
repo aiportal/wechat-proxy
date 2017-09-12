@@ -90,23 +90,25 @@ func registerWechatHandlers() {
 	http.Handle("/auth", authServer)      // get openid & unionid
 	http.Handle("/auth/info", authServer) // get user info
 
+	payServer := wechat.NewPayServer()
+	http.Handle("/pay", payServer)
 	// /pay/qrcode?
 	// &appid=...&mch_id=...&mch_key=...&server_ip=...
 	// &fee=...&name=&call=&...
-	payServer := wechat.NewPayServer()
-	http.Handle("/pay", payServer)
 	http.Handle("/pay/qrcode", payServer)
-	//http.Handle("/pay/js", payServer)
+	// /pay/js?
+	// &appid=...&mch_id=...&mch_key=...&server_ip=...
+	// &openid=...&fee=...&name=&call=&...
+	http.Handle("/pay/js", payServer)
 
 	// /jsapi?appid=...&secret=...
 	// /jsapi?access_token=...
-	http.Handle("/js/ticket", wechat.NewJsTicketServer())
+	http.Handle("/jsapi", wechat.NewJsTicketServer())
 
 	// /js/config?appid=...&secret=...&debug=&apilist=
 	http.Handle("/js/config", wechat.NewJsConfigServer())
 
-	//http.Handle("/jscard", wechat.NewCardServer())
-	//http.Handle("/js/pay", wechat.NewJsPayServer())
+	//http.Handle("/js/card", wechat.NewCardServer())
 }
 
 func registerEnterpriseHandlers() {

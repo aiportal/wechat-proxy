@@ -56,14 +56,14 @@ func (srv *WechatPayServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	p := srv.parseParam(r)
 	p.Sign = srv.paySignature(p, p.Mch_key, "mch_key", "call_url")
 
-	result, err := srv.sendParam(p)
+	order, err := srv.sendParam(p)
 	if err != nil {
 		w.Write(JsonResponse(err))
 		return
 	}
-	if result.Result_code != payResultSuccess ||
-		result.Return_code != payResultSuccess {
-		w.Write(JsonResponse(result))
+	if order.Result_code != payResultSuccess ||
+		order.Return_code != payResultSuccess {
+		w.Write(JsonResponse(order))
 		return
 	}
 
@@ -74,11 +74,11 @@ func (srv *WechatPayServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Printf("call_url: %s\n", p.Call_url)
 
 	if strings.HasSuffix(r.URL.Path, "/pay") {
-		w.Write(JsonResponse(result))
+		w.Write(JsonResponse(order))
 		return
 	}
 	if strings.HasSuffix(r.URL.Path, "/qrcode") {
-		_url := fmt.Sprintf("%s/qrcode?path=%s", srv.HostUrl(r), url.QueryEscape(result.Code_url))
+		_url := fmt.Sprintf("%s/qrcode?path=%s", srv.HostUrl(r), url.QueryEscape(order.Code_url))
 		bs, err := HttpGetJson(_url, nil)
 		if err != nil {
 			w.Write(JsonResponse(err))
@@ -90,6 +90,8 @@ func (srv *WechatPayServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasSuffix(r.URL.Path, "/js") {
+		config := srv.jsConfig(p.AppId, order.Prepay_id, p.Mch_key)
+		w.Write(JsonResponse(config))
 		return
 	}
 }
@@ -142,6 +144,15 @@ func (srv *WechatPayServer) parseParam(r *http.Request) (p *wxPayParam) {
 	if p.Call_url != "" {
 		p.Call_url = srv.NormalizeUrl(r, p.Call_url, "")
 	}
+	if strings.HasSuffix(r.URL.Path, "/js") {
+		p.Trade_type = "JSAPI"
+		if p.Openid == "" {
+			cookie, err := r.Cookie("openid")
+			if err == nil {
+				p.Openid = cookie.Value
+			}
+		}
+	}
 	return
 }
 
@@ -179,7 +190,8 @@ func (srv *WechatPayServer) paySignature(p interface{}, key string, excluded ...
 		if v.Field(i).Kind() != reflect.String {
 			continue
 		}
-		name := strings.ToLower(t.Field(i).Name)
+		name := t.Field(i).Name
+		name = strings.ToLower(name)
 		value := v.Field(i).String()
 		if value == "" {
 			continue
@@ -222,7 +234,17 @@ func (srv *WechatPayServer) sendParam(p *wxPayParam) (r *wxPayOrder, err error) 
 	return
 }
 
-func (srv *WechatPayServer) notifyResult(r *http.Request) (success []byte, err error) {
+func (srv *WechatPayServer) notifyResult(r *http.Request) (data []byte, err error) {
+
+	type wxPaySuccess struct {
+		Return_code string `xml:"return_code"`
+		Return_msg  string `xml:"return_msg"`
+	}
+	success := &wxPaySuccess{
+		Return_code: "SUCCESS",
+		Return_msg:  "OK",
+	}
+	data, err = xml.Marshal(success)
 
 	// parse result
 	defer r.Body.Close()
@@ -241,13 +263,16 @@ func (srv *WechatPayServer) notifyResult(r *http.Request) (success []byte, err e
 	if !ok {
 		log.Println(string(body))
 		log.Printf("get key: %s\n", result.Key())
-		err = ErrCacheTimeout
+		log.Println(ErrCacheTimeout.Error())
 		return
 	}
 	p := v.(wxPayParam)
 	if p.Call_url == "" {
 		return
 	}
+
+	// check result sign
+	//...
 
 	// notify call_url
 	js, err := json.Marshal(result)
@@ -263,20 +288,31 @@ func (srv *WechatPayServer) notifyResult(r *http.Request) (success []byte, err e
 		return
 	}
 
-	// return success
-	type wxPaySuccess struct {
-		Return_code string `xml:"return_code"`
-		Return_msg  string `xml:"return_msg"`
-	}
-	obj_success := &wxPaySuccess{
-		Return_code: "SUCCESS",
-		Return_msg:  "OK",
-	}
-	success, err = xml.Marshal(obj_success)
-	if err != nil {
-		return
-	}
 	return
+}
+
+func (srv *WechatPayServer) jsConfig(appid, prepay_id, mch_key string) interface{} {
+	type wxPayJs struct {
+		AppId     string `json:"appId"`
+		Timestamp string `json:"timeStamp"`
+		NonceStr  string `json:"nonceStr"`
+		Package   string `json:"package"`
+		SignType  string `json:"signType"`
+		PaySign   string `json:"paySign"`
+	}
+
+	c := &wxPayJs{
+		AppId:     appid,
+		Timestamp: fmt.Sprintf("%d", time.Now().Unix()),
+		NonceStr:  randomString(16),
+		Package:   fmt.Sprintf("prepay_id=%s", prepay_id),
+		SignType:  "MD5",
+	}
+	sign_str := fmt.Sprintf("appId=%s&nonceStr=%s&package=%s&signType=%s&timeStamp=%s&key=%s",
+		c.AppId, c.NonceStr, c.Package, c.SignType, c.Timestamp, mch_key)
+	sign_bytes := md5.Sum([]byte(sign_str))
+	c.PaySign = fmt.Sprintf("%X", sign_bytes[:])
+	return c
 }
 
 type wxPayParam struct {

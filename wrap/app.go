@@ -83,7 +83,19 @@ func (srv *WrapAppServer) realUrl(r *http.Request, path string, app *WxApp) stri
 func (srv *WrapAppServer) httpProxy(w http.ResponseWriter, r *http.Request, url string) (err error) {
 	log.Println(url)
 
-	resp, err := http.Get(url)
+	defer r.Body.Close()
+	req, err := http.NewRequest(r.Method, url, r.Body)
+	if err != nil {
+		return
+	}
+	for k, v := range r.Header {
+		req.Header[k] = v
+	}
+	for _, c := range r.Cookies() {
+		req.AddCookie(c)
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return
 	}
