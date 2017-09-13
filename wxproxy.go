@@ -12,10 +12,11 @@ import (
 )
 
 func main() {
-	registerWrapHandlers()
-	registerWechatHandlers()
-	registerEnterpriseHandlers()
+	wrapHandlers()
+	wechatHandlers()
+	enterpriseHandlers()
 
+	http.Handle("/example/", http.StripPrefix("/example/", http.FileServer(http.Dir("./example"))))
 	http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		body, err := ioutil.ReadAll(r.Body)
@@ -26,26 +27,30 @@ func main() {
 		w.Write(body)
 		log.Println(string(body))
 	})
-	http.Handle("/example/", http.StripPrefix("/example/", http.FileServer(http.Dir("./example"))))
 
-	host, port := parseArgs()
+	host, port, tls := parseArgs()
 	address := fmt.Sprintf("%s:%d", host, port)
 	fmt.Printf("wechat proxy starting at %q ...\n", address)
-	log.Fatal(http.ListenAndServe(address, nil))
+
+	if tls {
+		log.Fatal(http.ListenAndServeTLS(address, "wxproxy.crt", "wxproxy.key", nil))
+	} else {
+		log.Fatal(http.ListenAndServe(address, nil))
+	}
 }
 
-func parseArgs() (host string, port uint) {
+func parseArgs() (host string, port uint, tls bool) {
 
 	flag.StringVar(&host, "host", "", "Listening hostname.")
-	flag.StringVar(&host, "h", "", "Listening hostname.")
 	flag.UintVar(&port, "port", 8080, "Listening port.")
 	flag.UintVar(&port, "p", 8080, "Listening port.")
+	flag.BoolVar(&tls, "tls", false, "Https scheme.")
 
 	flag.Parse()
 	return
 }
 
-func registerWrapHandlers() {
+func wrapHandlers() {
 
 	// /register?key=...&appid=...&secret=...
 	// &token=&aes=
@@ -70,7 +75,7 @@ func registerWrapHandlers() {
 	// http.Handle("/user/", userServer)
 }
 
-func registerWechatHandlers() {
+func wechatHandlers() {
 
 	// /api?appid=...&secret=...
 	// /api/new?appid=...&secret=...
@@ -108,10 +113,10 @@ func registerWechatHandlers() {
 	// /js/config?appid=...&secret=...&debug=&apilist=
 	http.Handle("/js/config", wechat.NewJsConfigServer())
 
-	//http.Handle("/js/card", wechat.NewCardServer())
+	http.Handle("/js/card", wechat.NewCardServer())
 }
 
-func registerEnterpriseHandlers() {
+func enterpriseHandlers() {
 
 	// /qyapi?corpid=...&corpsecret=...
 	// /qyapi/new?corpid=...&corpsecret=...
