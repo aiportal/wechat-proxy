@@ -19,8 +19,8 @@
   
 > OAuth2:  
   
-  首先关注测试号：[微信测试号](http://mmbiz.qpic.cn/mmbiz_jpg/lgEc2N7A7WB5fepEujANMWCLDLGCZjKX2EqjWXObAMN85Jdo7L4h8MuMpecvQWicViawn7nW3YlcRmvzhNjGLscA/0){:target="_blank"}  
-  然后用微信打开链接：[https://wx.aiportal.net/app/test/auth/info?call=/echo](https://wx.aiportal.net/qrcode?path=https%3A%2F%2Fwx.aiportal.net%2Fapp%2Ftest%2Fauth%3Fcall%3D%2Fecho){:target="_blank"}
+  首先关注测试号：[微信测试号](http://mmbiz.qpic.cn/mmbiz_jpg/lgEc2N7A7WB5fepEujANMWCLDLGCZjKX2EqjWXObAMN85Jdo7L4h8MuMpecvQWicViawn7nW3YlcRmvzhNjGLscA/0)  
+  然后用微信打开链接：[https://wx.aiportal.net/app/test/auth/info?call=/echo](https://wx.aiportal.net/qrcode?path=https%3A%2F%2Fwx.aiportal.net%2Fapp%2Ftest%2Fauth%3Fcall%3D%2Fecho)
 
 > 微信支付：
   
