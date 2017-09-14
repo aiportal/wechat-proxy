@@ -41,7 +41,6 @@ func main() {
 
 func parseArgs() (host string, port uint, tls bool) {
 
-	flag.StringVar(&host, "host", "", "Listening hostname.")
 	flag.UintVar(&port, "port", 8080, "Listening port.")
 	flag.UintVar(&port, "p", 8080, "Listening port.")
 	flag.BoolVar(&tls, "tls", false, "Https scheme.")
@@ -83,8 +82,8 @@ func wechatHandlers() {
 	http.Handle("/api", apiServer)
 	http.Handle("/api/new", apiServer)
 
-	// /msg?token=...&aes=...&call=...&call=...&signature=...&...
-	// /msg/json?token=...&aes=...&call=...&call=...&signature=...&...
+	// /msg?token=...&aes=...&call=...&call=...&...
+	// /msg/json?token=...&aes=...&call=...&call=...&...
 	msgServer := wechat.NewMessageServer()
 	http.Handle("/msg", msgServer)
 	http.Handle("/msg/json", msgServer)

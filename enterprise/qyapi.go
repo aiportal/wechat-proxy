@@ -32,7 +32,7 @@ func NewQyServer() *WechatQyServer {
 
 func (srv *WechatQyServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	appid, secret := r.Form.Get("corpid"), r.Form.Get("corpsecret")
+	appid, secret := r.Form.Get("appid"), r.Form.Get("secret")
 
 	key := srv.hashKey(appid, secret)
 	if strings.HasSuffix(r.URL.Path, "/new") {
