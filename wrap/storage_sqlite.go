@@ -3,6 +3,7 @@
 package wrap
 
 import (
+	"errors"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"time"
@@ -18,6 +19,15 @@ type Storage struct {
 
 func NewStorage() *Storage {
 	return new(Storage)
+}
+
+func (*Storage) db(f func(*gorm.DB)) {
+	db, err := gorm.Open(APP_DB_TYPE, APP_DB_NAME)
+	if err != nil {
+		return
+	}
+	defer db.Close()
+	f(db)
 }
 
 func (*Storage) SaveApp(app *WxApp) (err error) {
@@ -52,3 +62,22 @@ func (*Storage) LoadApp(key string) (app *WxApp, err error) {
 	app = &r
 	return
 }
+
+func (s *Storage) SaveUser(user *WxUser) (err error) {
+	s.db(func(db *gorm.DB) {
+		db.AutoMigrate(&WxUser{})
+		err = db.Save(user).Error
+	})
+	return
+}
+
+func (s *Storage) LoadUser(appid, openid string) (user *WxUser, err error) {
+	s.db(func(db *gorm.DB) {
+		r := WxUser{}
+		err = db.Where("appid = ? AND openid = ?", appid, openid).First(&r).Error
+		user = &r
+	})
+	return
+}
+
+var ErrNotFound = errors.New("not found")

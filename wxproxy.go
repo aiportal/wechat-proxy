@@ -69,9 +69,8 @@ func wrapHandlers() {
 	// http.Handle("/short/", wrap.NewShortServer())
 
 	// /user
-	// userServer := wrap.NewUserServer()
-	// http.Handle("/user", userServer)
-	// http.Handle("/user/", userServer)
+	userServer := wrap.NewUserServer()
+	http.Handle("/user", userServer)
 }
 
 func wechatHandlers() {

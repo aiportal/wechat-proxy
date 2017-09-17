@@ -48,7 +48,6 @@ func (srv *RegisterServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// store app info
 	err = NewStorage().SaveApp(app)
-	//err = srv.storePermanent(app)
 	if err != nil {
 		w.Write(wx.JsonResponse(err))
 		return

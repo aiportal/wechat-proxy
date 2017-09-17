@@ -13,7 +13,7 @@
 
     <script>
         var openid = 'o62SMjlZ378PMI6j5b5x8HAoX9YA';
-        var url = 'http://' + location.host + '/app/bayesian/pay/js?fee=1&call=/echo&openid=' + openid;
+        var url = 'http://' + location.host + '/app/aiportal/pay/js?fee=1&call=/echo&openid=' + openid;
         function test_pay() {
             Vue.http.get(url).then(function (res) {
                 var config = res.body;

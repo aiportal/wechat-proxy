@@ -71,7 +71,7 @@ func init() {
 // cover 90% wechat message and events
 // https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1421140453
 // https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1421140454
-type wxMessage struct {
+type WxMessage struct {
 	ToUserName   string
 	FromUserName string
 	CreateTime   uint64
@@ -186,6 +186,7 @@ type wxEventBeacon struct {
 
 // https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1455785130
 type wxEventVerify struct {
+	wxEvent
 	ExpiredTime uint64 `json:",omitempty"`
 	FailTime    uint64 `json:",omitempty"`
 	FailReason  string `json:",omitempty"`
@@ -193,6 +194,7 @@ type wxEventVerify struct {
 
 // https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1444894131
 type wxEventWifi struct {
+	wxEvent
 	ConnectTime uint64
 	ExpireTime  uint64
 	VendorId    string

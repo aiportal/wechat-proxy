@@ -40,22 +40,25 @@ func (srv *WechatMessageServer) ServeHTTP(w http.ResponseWriter, r *http.Request
 	_, timestamp, nonce := f.Get("signature"), f.Get("timestamp"), f.Get("nonce")
 	encrypt_type, msg_signature := f.Get("encrypt_type"), f.Get("msg_signature")
 	token, aes_key := f.Get("token"), f.Get("aes")
-
 	call_urls := srv.getCalls(r)
 
 	// read body
 	defer r.Body.Close()
-	req_body, err := ioutil.ReadAll(r.Body)
+	raw_body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println(err.Error())
 		return
 	}
-	log.Println(string(req_body))
+	log.Println(string(raw_body))
 
-	// dispatch raw message
 	if token == "" || aes_key == "" || encrypt_type == "" {
-		if strings.HasSuffix(r.URL.Path, "/json") && encrypt_type == "" {
-			resp_body, err := srv.translateMsg(req_body, call_urls)
+		if strings.HasSuffix(r.URL.Path, "/msg") {
+			resp_body := srv.dispatchMsg(raw_body, call_urls)
+			w.Write(resp_body)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/json") {
+			resp_body, err := srv.translateMsg(raw_body, call_urls)
 			if err != nil {
 				log.Println(err.Error())
 				return
@@ -63,34 +66,35 @@ func (srv *WechatMessageServer) ServeHTTP(w http.ResponseWriter, r *http.Request
 			w.Write(resp_body)
 			return
 		}
-		resp_body := srv.dispatchMsg(req_body, call_urls)
-		w.Write(resp_body)
-		return
 	}
 
-	// decrypt and dispatch message
+	// decrypt
+	log.Println("decrypt")
 	c, err := NewCrypter(token, aes_key)
 	if err != nil {
 		log.Println(err.Error())
 		return
 	}
-
-	msg, appid, err := c.DecryptPkg(bytes.NewReader(req_body), timestamp, nonce, msg_signature)
+	msg, appid, err := c.DecryptPkg(bytes.NewReader(raw_body), timestamp, nonce, msg_signature)
 	if err != nil {
 		log.Println(err.Error())
 		return
 	}
+
+	// dispatch
 	var reply []byte
+	if strings.HasSuffix(r.URL.Path, "/msg") {
+		reply = srv.dispatchMsg(msg, call_urls)
+	}
 	if strings.HasSuffix(r.URL.Path, "/json") {
 		reply, err = srv.translateMsg(msg, call_urls)
 		if err != nil {
 			log.Println(err.Error())
 			return
 		}
-	} else {
-		reply = srv.dispatchMsg(msg, call_urls)
 	}
 
+	// reply
 	resp_body, err := c.EncryptPkg(reply, appid)
 	if err != nil {
 		log.Println(err.Error())
@@ -101,7 +105,7 @@ func (srv *WechatMessageServer) ServeHTTP(w http.ResponseWriter, r *http.Request
 
 // dispatch json message
 func (srv *WechatMessageServer) translateMsg(msg []byte, urls []string) (reply []byte, err error) {
-	var m wxMessage
+	var m WxMessage
 	err = xml.Unmarshal(msg, &m)
 	if err != nil {
 		return
@@ -126,6 +130,10 @@ func (srv *WechatMessageServer) translateMsg(msg []byte, urls []string) (reply [
 	}
 
 	reply_js := srv.dispatchMsg(msg_js, urls)
+	if len(reply_js) == 0 {
+		reply = reply_js
+		return
+	}
 
 	var r WxReply
 	err = json.Unmarshal(reply_js, &r)
@@ -182,7 +190,17 @@ func (srv *WechatMessageServer) getCalls(r *http.Request) []string {
 	if len(calls) < 1 {
 		return calls
 	}
+
 	query := srv.msgQuery(r)
+	appid := r.Form.Get("appid")
+	secret := r.Form.Get("secret")
+	if appid != "" {
+		query += "&appid=" + appid
+	}
+	if secret != "" {
+		query += "&secret=" + secret
+	}
+
 	for i, v := range calls {
 		calls[i] = srv.normalizeUrl(r, v, query)
 	}
