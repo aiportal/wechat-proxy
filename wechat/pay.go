@@ -91,7 +91,14 @@ func (srv *WechatPayServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if strings.HasSuffix(r.URL.Path, "/js") {
 		config := srv.jsConfig(p.AppId, order.Prepay_id, p.Mch_key)
-		w.Write(JsonResponse(config))
+		var_name := r.Form.Get("var")
+		if var_name == "" {
+			w.Write(JsonResponse(config))
+		} else {
+			bs := JsonResponse(config)
+			js := fmt.Sprintf("var %s=%s", var_name, string(bs))
+			w.Write([]byte(js))
+		}
 		return
 	}
 }
