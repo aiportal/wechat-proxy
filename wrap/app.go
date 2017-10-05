@@ -25,6 +25,15 @@ func (srv *WrapAppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	req_path := strings.TrimLeft(r.URL.Path, "/")
 	parts := strings.Split(req_path, "/")
 	if len(parts) < 3 {
+		if len(parts) == 2 {
+			app, err := srv.appInfo(parts[1])
+			if err != nil {
+				w.Write(wx.JsonResponse(err))
+				return
+			}
+			w.Write(wx.JsonResponse(app))
+			return
+		}
 		http.NotFound(w, r)
 		return
 	}
@@ -110,5 +119,29 @@ func (srv *WrapAppServer) httpProxy(w http.ResponseWriter, r *http.Request, url 
 		w.Header().Set(k, v)
 	}
 	w.Write(body)
+	return
+}
+
+func (srv *WrapAppServer) appInfo(key string) (app *WxApp, err error) {
+	app, err = NewStorage().LoadApp(key)
+	if err != nil {
+		return
+	}
+	mask := "********"
+	if (app.Secret != "") {
+		app.Secret = mask
+	}
+	if (app.Token != "") {
+		app.Token = mask
+	}
+	if (app.AesKey != "") {
+		app.AesKey = mask
+	}
+	if (app.MchId != "") {
+		app.MchId = mask
+	}
+	if (app.MchKey != "") {
+		app.MchKey = mask
+	}
 	return
 }
