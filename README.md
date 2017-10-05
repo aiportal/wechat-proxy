@@ -26,23 +26,13 @@
   
     <img src="https://wx.aiportal.net/app/aiportal/pay/qrcode?fee=1&name=支付测试&call=/echo"><img>
 
-> 微信公众号支付：
+> 微信公众号支付：(version 2.02)
   
-    var openid = 'o62SMjlZ378PMI6j5b5x8HAoX9YA';
-    var url = 'http://' + location.host + '/app/aiportal/pay/js?fee=1&call=/echo&openid=' + openid;
-    function test_pay() {
-        Vue.http.get(url).then(function (res) {
-            var config = res.body;
-            alert(config.package);
-            pop_pay(config);
-        }, function (res) {
-            alert('error');
-        });
-    }
+    <script src="/app/aiportal/pay/js?fee=1&var=payConfig&call=/echo&openid=o62SMjlZ378PMI6j5b5x8HAoX9YA"></script>
 
     function pop_pay(config) {
         // 弹出微信支付界面
-        WeixinJSBridge.invoke('getBrandWCPayRequest', config, function (res) {
+        WeixinJSBridge.invoke('getBrandWCPayRequest', payConfig, function (res) {
             alert(res.err_msg);
         });
     }
@@ -73,7 +63,12 @@
  如果设置了此项参数, 可以使用简单的 url 请求实现微信支付功能。  
  > expires: 过期时间，单位秒。如果设置此项参数，注册信息会在到期后自动删除。
  > call: 可用API，可以重复多次。如果设置此项参数，该app注册信息仅可用于已列出的api接口。
- 
+
+新增功能：
+ > version 2.02 开始，允许以 merge 方式补充参数内容。
+ 即key,appid,secret三个参数必填，
+ 其他可选参数会自动merge到当前注册信息中，不必一次提交。
+    
 ### 2、access_token 全局缓存:
 access_token 全局缓存自动获取最新的 access_token 值缓存在代理服务器内存中。  
 access_token 全局缓存支持多进程、多服务器共享 access_token，还可以无限次获取，简化后台服务的开发难度。
