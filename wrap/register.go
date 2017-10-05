@@ -46,29 +46,15 @@ func (srv *RegisterServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// merge parameters
-	if f.Get("token") != "" { 
-		app.Token = f.Get("token")
-	}
-	if f.Get("aes") != "" {
-		app.AesKey = f.Get("aes")
-	}
-	if f.Get("mch_id") != "" {
-		app.MchId = f.Get("mch_id")
-	}
-	if f.Get("mch_key") != "" {
-		app.MchKey = f.Get("mch_key")
-	}
-	if f.Get("server_ip") != "" {
-		app.IpAddress = f.Get("server_ip")
-	}
-	if f.Get("call") != "" {
-		app.setCalls(f["call"])
-	}
-	if f.Get("expires") != "" {
-		err := app.setExpires(f.Get("expires"))
-		if err != nil {
-			w.Write(wx.JsonResponse(err))
-			return
+	for k, _ := range f {
+		switch k {
+		case "token": app.Token = f.Get("token")
+		case "aes": app.AesKey = f.Get("aes")
+		case "mch_id": app.MchId = f.Get("mch_id")
+		case "mch_key": app.MchKey = f.Get("mch_key")
+		case "server_ip": app.IpAddress = f.Get("server_ip")
+		case "call": app.setCalls(f["call"])
+		case "expires": app.setExpires(f.Get("expires"))
 		}
 	}
 
