@@ -32,7 +32,7 @@ func (e *WxError) Serialize() []byte {
 	return []byte(js)
 }
 
-func wxErrorStr(msg string) *WxError {
+func NewErrorStr(msg string) *WxError {
 	e := new(WxError)
 	e.ErrCode = -10001
 	e.ErrMsg = msg

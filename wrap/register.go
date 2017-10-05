@@ -19,31 +19,57 @@ func (srv *RegisterServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	f := r.Form
 
-	// get parameters
-	app := &WxApp{
-		Key:       f.Get("key"),
-		AppId:     f.Get("appid"),
-		Secret:    f.Get("secret"),
-		Token:     f.Get("token"),
-		MchId:     f.Get("mch_id"),
-		MchKey:    f.Get("mch_key"),
-		IpAddress: f.Get("server_ip"),
-		AesKey:    f.Get("aes"),
-	}
-	app.setCalls(f["call"])
-
-	// set expires time
-	err := app.setExpires(f.Get("expires"))
-	if err != nil {
-		w.Write(wx.JsonResponse(err))
-		return
-	}
+	// get necessary parameters
+	key, appid, secret := f.Get("key"), f.Get("appid"), f.Get("secret")
 
 	// check appid and secret
-	_, wxErr := srv.GetAccessToken(srv.HostUrl(r), app.AppId, app.Secret)
+	_, wxErr := srv.GetAccessToken(srv.HostUrl(r), appid, secret)
 	if wxErr != nil {
 		w.Write(wxErr.Serialize())
 		return
+	}
+
+	// check key and appid
+	app, err := NewStorage().LoadApp(key)
+	if err != nil {
+		app = &WxApp{
+			Key: key,
+			AppId: appid,
+			Secret: secret,
+		}
+	} else {
+		if app.AppId != appid {
+			wxErr = wx.NewErrorStr("key exists")
+			w.Write(wxErr.Serialize())
+			return
+		}
+	}
+
+	// merge parameters
+	if f.Get("token") != "" { 
+		app.Token = f.Get("token")
+	}
+	if f.Get("aes") != "" {
+		app.AesKey = f.Get("aes")
+	}
+	if f.Get("mch_id") != "" {
+		app.MchId = f.Get("mch_id")
+	}
+	if f.Get("mch_key") != "" {
+		app.MchKey = f.Get("mch_key")
+	}
+	if f.Get("server_ip") != "" {
+		app.IpAddress = f.Get("server_ip")
+	}
+	if f.Get("call") != "" {
+		app.setCalls(f["call"])
+	}
+	if f.Get("expires") != "" {
+		err := app.setExpires(f.Get("expires"))
+		if err != nil {
+			w.Write(wx.JsonResponse(err))
+			return
+		}
 	}
 
 	// store app info
@@ -53,5 +79,9 @@ func (srv *RegisterServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(wx.JsonResponse(nil))
+	return
+}
+
+func (srv *RegisterServer) checkPrivilage(key, appid, secret string) (wxErr wx.WxError) {
 	return
 }

@@ -7,21 +7,26 @@
     <script src="https://cdn.bootcss.com/vue-resource/1.3.4/vue-resource.min.js"></script>
 
     <script src="http://res.wx.qq.com/open/js/jweixin-1.2.0.js"></script>
+    <script src="/app/aiportal/pay/js?fee=1&var=payConfig&call=/echo&openid=o62SMjlZ378PMI6j5b5x8HAoX9YA"></script>
 </head>
 <body>
     <button onclick="test_pay()">Test Pay</button>
 
     <script>
-        var openid = 'o62SMjlZ378PMI6j5b5x8HAoX9YA';
-        var url = 'http://' + location.host + '/app/aiportal/pay/js?fee=1&call=/echo&openid=' + openid;
+//        var openid = 'o62SMjlZ378PMI6j5b5x8HAoX9YA';
+//        var url = 'http://' + location.host + '/app/aiportal/pay/js?fee=1&call=/echo&openid=' + openid;
+//        function test_pay() {
+//            Vue.http.get(url).then(function (res) {
+//                var config = res.body;
+//                alert(config.package);
+//                pop_pay(config);
+//            }, function (res) {
+//                alert('error');
+//            });
+//        }
+
         function test_pay() {
-            Vue.http.get(url).then(function (res) {
-                var config = res.body;
-                alert(config.package);
-                pop_pay(config);
-            }, function (res) {
-                alert('error');
-            });
+            pop_pay(payConfig);
         }
 
         function pop_pay(config) {

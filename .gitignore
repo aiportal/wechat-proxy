@@ -15,6 +15,6 @@
 
 .idea/
 
-.db
+wxproxy.db
 
 _release/
