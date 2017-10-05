@@ -76,7 +76,8 @@ func (srv *WrapAppServer) realUrl(r *http.Request, path string, app *WxApp) stri
 	// generate api url
 	query := r.URL.RawQuery
 	if strings.HasPrefix(path, "/msg") {
-		query += fmt.Sprintf("&appid=%s&secret=%s&token=%s&aes=%s", app.AppId, app.Secret, app.Token, app.AesKey)
+		access_token, _ := srv.GetAccessToken(srv.HostUrl(r), app.AppId, app.Secret)
+		query += fmt.Sprintf("&appid=%s&access_token=%s&token=%s&aes=%s", app.AppId, access_token, app.Token, app.AesKey)
 	} else if strings.HasPrefix(path, "/pay") {
 		query += fmt.Sprintf("&appid=%s&mch_id=%s&mch_key=%s&server_ip=%s",
 			app.AppId, app.MchId, app.MchKey, app.IpAddress)
